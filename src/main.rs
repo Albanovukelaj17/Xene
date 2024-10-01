@@ -1,3 +1,5 @@
+mod lexer;
+
 use std::io::{self, Write}; // For handling input/output
 
 fn main() {
