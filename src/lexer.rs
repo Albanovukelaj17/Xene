@@ -1,3 +1,5 @@
+#[derive(Debug)]
+#[allow(dead_code)]
 pub enum Token{
     Var, // Schlüsselwort `le or c´var t`
     Identifier(String),  // Variablenname
