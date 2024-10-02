@@ -1,26 +1,30 @@
-mod lexer;
+mod lexer;  // Importiere deine lexer.rs Datei
 
-use std::io::{self, Write}; // For handling input/output
+use std::io::{self, Write};  // Zum Verarbeiten der Eingabe/Ausgabe
+use lexer::tokenize;  // Importiere die tokenize-Funktion aus deinem Lexer
 
 fn main() {
-    println!("Welcome to Xene!");
+    println!("Willkommen bei Xene!");
 
-    // Starting a REPL (Read-Eval-Print-Loop)
+    // Starte eine REPL (Read-Eval-Print-Loop)
     loop {
-        print!("xene> "); // Display a prompt
-        io::stdout().flush().unwrap(); // Make sure the prompt is displayed before input
+        print!("xene> "); // Zeige den Eingabeaufforderung an
+        io::stdout().flush().unwrap(); // Leere den Puffer, damit der Prompt sofort angezeigt wird
 
-        let mut input = String::new(); // Allocate a new String to store user input
-        io::stdin().read_line(&mut input).expect("Failed to read input");
+        let mut input = String::new(); // Erstelle einen neuen String für die Benutzereingabe
+        io::stdin().read_line(&mut input).expect("Fehler beim Lesen der Eingabe");
 
-        let trimmed = input.trim(); // Remove any extra whitespace or newlines
+        let trimmed = input.trim(); // Entferne überflüssige Leerzeichen und Zeilenumbrüche
 
         if trimmed == "exit" {
-            println!("Goodbye!");
-            break; // Exit the loop if the user types 'exit'
+            println!("Auf Wiedersehen!");
+            break; // Beende die Schleife, wenn der Benutzer 'exit' eingibt
         }
 
-        // For now, just echo back the input
-        println!("You entered: {}", trimmed);
+        // Tokenisiere die Benutzereingabe und gib die Tokens aus
+        let tokens = tokenize(trimmed);
+        for token in tokens {
+            println!("{:?}", token); // Gib jedes Token aus
+        }
     }
 }
