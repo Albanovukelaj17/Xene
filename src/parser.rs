@@ -26,3 +26,29 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     }
     None
 }
+
+pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    // Erwarte eine Zahl auf der linken Seite
+    if let Some(Token::Number(left_val)) = tokens.get(0) {
+        tokens.remove(0); // Entferne die Zahl
+
+        // Erwarte einen Operator (+, -, *, /)
+        if let Some(operator) = tokens.get(0).cloned() {
+
+            tokens.remove(0); // Entferne den Operator
+
+            // Erwarte eine Zahl auf der rechten Seite
+            if let Some(Token::Number(right_val)) = tokens.get(0) {
+                tokens.remove(0); // Entferne die Zahl
+
+                return Some(ASTNode::BinaryOp {
+                    left: Box::new(ASTNode::Number(*left_val)),
+                    operator: operator.cloned(),
+                    right: Box::new(ASTNode::Number(*right_val)),
+                });
+            }
+        }
+    }
+    None
+}
+
