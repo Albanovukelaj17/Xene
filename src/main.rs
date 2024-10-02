@@ -25,9 +25,12 @@ fn main() {
         }
 
         // Tokenisiere die Benutzereingabe und gib die Tokens aus
-        let tokens = tokenize(trimmed);
-        for token in tokens {
-            println!("{:?}", token); // Gib jedes Token aus
+        let mut tokens = tokenize(trimmed);
+        // Versuche, einen Zuweisungs-AST zu parsen
+        if let Some(ast) = parse_assignment(&mut tokens) {
+            println!("{:?}", ast);  // Zeige den AST an
+        } else {
+            println!("Ungültiger Ausdruck!");
         }
     }
 }
