@@ -15,7 +15,12 @@ pub enum Token{
     Print,               // Schlüsselwort `print`
     If,                  // Schlüsselwort `if`
     Else,                // Schlüsselwort `else`
+    While,               // Schlüsselwort 'while'
+    For,                 // Schlüsselwort 'for'
+    Switch,              // Schlüsselwort 'switch'
     Eof,                 // Ende des Codes
+
+
 }
 
 pub fn tokenize(input: &str) -> Vec<Token>{
@@ -51,7 +56,27 @@ pub fn tokenize(input: &str) -> Vec<Token>{
                     ident.push(chars[i]);
                     i += 1;
                 }
+                i -= 1;
+                // Überprüfen, ob es ein Schlüsselwort ist
+                match ident.as_str() {
+                    "var" => tokens.push(Token::Var),
+                    "print" => tokens.push(Token::Print),
+                    "if" => tokens.push(Token::If),
+                    "else" => tokens.push(Token::Else),
+                    "while" => tokens.push(Token::While),
+                    "for" => tokens.push(Token::For),
+                    "switch" => tokens.push(Token::Switch),
+                    _ => tokens.push(Token::Identifier(ident)),
+                }
+            }
+            ' ' | '\n' => {}  // Ignoriere Leerzeichen und Zeilenumbrüche
+            _ => {
+                println!("Unbekanntes Zeichen: {}", chars[i]);  // Fehler bei unbekannten Zeichen
+            }
         }
-        }
+        i += 1;
     }
+
+    tokens.push(Token::Eof); // Füge am Ende des Codes ein EOF-Token hinzu
+    tokens
 }
