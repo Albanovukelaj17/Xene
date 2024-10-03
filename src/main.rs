@@ -1,35 +1,41 @@
-mod lexer;  // Importiere deine lexer.rs Datei
+mod lexer;
 mod parser;
-mod interpreter;
+mod interpreter;  // Füge den Interpreter hinzu
 
-use std::io::{self, Write};  // Zum Verarbeiten der Eingabe/Ausgabe
-use lexer::tokenize;  // Importiere die tokenize-Funktion aus deinem Lexer
-use parser::parse_assignment;
+use std::collections::HashMap;
+use std::io::{self, Write};
+use parser::{ASTNode, parse_assignment, parse_expression};  // Importiere die Parser-Funktionen
+use lexer::tokenize;
 use interpreter::interpret;
 
 fn main() {
     println!("Willkommen bei Xene!");
 
-    // Starte eine REPL (Read-Eval-Print-Loop)
+    let mut env = HashMap::new();  // Die Umgebung für Variablen
+
     loop {
-        print!("xene> "); // Zeige den Eingabeaufforderung an
-        io::stdout().flush().unwrap(); // Leere den Puffer, damit der Prompt sofort angezeigt wird
+        print!("xene> ");
+        std::io::stdout().flush().unwrap();
 
-        let mut input = String::new(); // Erstelle einen neuen String für die Benutzereingabe
-        io::stdin().read_line(&mut input).expect("Fehler beim Lesen der Eingabe");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).expect("Fehler beim Lesen der Eingabe");
 
-        let trimmed = input.trim(); // Entferne überflüssige Leerzeichen und Zeilenumbrüche
+        let trimmed = input.trim();
 
         if trimmed == "exit" {
             println!("Auf Wiedersehen!");
-            break; // Beende die Schleife, wenn der Benutzer 'exit' eingibt
+            break;
         }
 
-        // Tokenisiere die Benutzereingabe und gib die Tokens aus
-        let mut tokens = tokenize(trimmed);
-        // Versuche, einen Zuweisungs-AST zu parsen
-        if let Some(ast) = parse_assignment(&mut tokens) {
-            println!("{:?}", ast);  // Zeige den AST an
+        let tokens = tokenize(trimmed);
+
+        // Versuche zuerst, eine Zuweisung zu parsen
+        if let Some(ast) = parse_assignment(&tokens) {
+            interpret(ast, &mut env);  // Interpretiere den AST und führe die Zuweisung aus
+        }
+        // Versuche eine Expression zu parsen
+        else if let Some(ast) = parse_expression(&tokens) {
+            interpret(ast, &mut env);  // Interpretiere die Expression (arithmetische Operation)
         } else {
             println!("Ungültiger Ausdruck!");
         }
