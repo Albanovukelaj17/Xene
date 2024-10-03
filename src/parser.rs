@@ -8,17 +8,17 @@ pub enum ASTNode {
 }
 
 pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    if let Some(Token::Var) = tokens.get(0) {
+    if let Some(Token::Var) = tokens.get(0).cloned() {
         tokens.remove(0);  // Entferne `var`
-        if let Some(Token::Identifier(var_name)) = tokens.get(0) {
+        if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
             tokens.remove(0);  // Entferne den Variablennamen
-            if let Some(Token::Equal) = tokens.get(0) {
+            if let Some(Token::Equal) = tokens.get(0).cloned() {
                 tokens.remove(0);  // Entferne das Gleichheitszeichen `=`
-                if let Some(Token::Number(value)) = tokens.get(0) {
+                if let Some(Token::Number(value)) = tokens.get(0).cloned() {
                     tokens.remove(0);  // Entferne die Zahl
                     return Some(ASTNode::Assignment {
                         var_name: var_name.clone(),
-                        value: Box::new(ASTNode::Number(*value)),
+                        value: Box::new(ASTNode::Number(value)),
                     });
                 }
             }
@@ -28,27 +28,22 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    // Erwarte eine Zahl auf der linken Seite
-    if let Some(Token::Number(left_val)) = tokens.get(0) {
-        tokens.remove(0); // Entferne die Zahl
+    // Entferne und hole die Zahl auf der linken Seite
+    if let Token::Number(left_val) = tokens.remove(0) {
 
-        // Erwarte einen Operator (+, -, *, /)
-        if let Some(operator) = tokens.get(0).cloned() {
+        // Entferne und hole den Operator (+, -, *, /)
+        if let operator = tokens.remove(0) {
 
-            tokens.remove(0); // Entferne den Operator
-
-            // Erwarte eine Zahl auf der rechten Seite
-            if let Some(Token::Number(right_val)) = tokens.get(0) {
-                tokens.remove(0); // Entferne die Zahl
+            // Entferne und hole die Zahl auf der rechten Seite
+            if let Token::Number(right_val) = tokens.remove(0) {
 
                 return Some(ASTNode::BinaryOp {
-                    left: Box::new(ASTNode::Number(*left_val)),
-                    operator: operator.cloned(),
-                    right: Box::new(ASTNode::Number(*right_val)),
+                    left: Box::new(ASTNode::Number(left_val)),
+                    operator,  // Nutze den Operator direkt
+                    right: Box::new(ASTNode::Number(right_val)),
                 });
             }
         }
     }
     None
 }
-
