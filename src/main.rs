@@ -1,10 +1,11 @@
 mod lexer;  // Importiere deine lexer.rs Datei
 mod parser;
+mod interpreter;
 
 use std::io::{self, Write};  // Zum Verarbeiten der Eingabe/Ausgabe
 use lexer::tokenize;  // Importiere die tokenize-Funktion aus deinem Lexer
 use parser::parse_assignment;
-
+use interpreter::interpret;
 
 fn main() {
     println!("Willkommen bei Xene!");
