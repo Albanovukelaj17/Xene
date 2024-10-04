@@ -92,9 +92,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "print" => tokens.push(Token::Print),
                     "if" => tokens.push(Token::If),
                     "else" => tokens.push(Token::Else),
-                    _ => tokens.push(Token::Identifier(ident)),
+                    _ => tokens.push(Token::Identifier(ident)),  // Variablenname
                 }
             }
+
             _ => {
                 println!("Unbekanntes Zeichen: {}", chars[i]);  // Fehler bei unbekannten Zeichen
             }

@@ -4,6 +4,7 @@ use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
 pub enum ASTNode {
     Assignment { var_name: String, value: Box<ASTNode> },
     Number(i64),
+    Identifier(String),
     BinaryOp { left: Box<ASTNode>, operator: Token, right: Box<ASTNode> },
     Block(Vec<ASTNode>),
     // Neue Knoten für If und While hinzufügen
@@ -16,6 +17,7 @@ pub enum ASTNode {
         condition: Box<ASTNode>,
         body: Box<ASTNode>,
     },
+    Print(String)
 }
 
 pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
@@ -39,69 +41,106 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    // Entferne und hole die Zahl auf der linken Seite
-    if let Token::Number(left_val) = tokens.remove(0) {
+    // Beispiel für eine `print`-Anweisung
+    if let Some(Token::Print) = tokens.get(0) {
+        tokens.remove(0);  // Entferne das `print`-Token
 
-        // Entferne und hole den Operator (+, -, *, /)
-        if let operator = tokens.remove(0) {
+        // Erwarte eine Variable oder einen Ausdruck nach `print`
+        if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+            tokens.remove(0);  // Entferne die Variable
 
-            // Entferne und hole die Zahl auf der rechten Seite
-            if let Token::Number(right_val) = tokens.remove(0) {
-
-                return Some(ASTNode::BinaryOp {
-                    left: Box::new(ASTNode::Number(left_val)),
-                    operator,  // Nutze den Operator direkt
-                    right: Box::new(ASTNode::Number(right_val)),
-                });
+            // Erwarte ein Semikolon nach der Anweisung
+            if let Some(Token::Semicolon) = tokens.get(0) {
+                tokens.remove(0);  // Entferne das Semikolon
+                return Some(ASTNode::Print(var_name));  // Gib die `print`-Anweisung zurück
             }
         }
     }
+
+    // Andere Ausdrücke (wie arithmetische Operationen) parsen
+    if let Some(ast) = parse_binary_op(tokens) {
+        return Some(ast);
+    }
+
     None
 }
 
-
-pub fn parse_if(tokens: &mut Vec<Token>)-> Option<ASTNode> {
+pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::If) = tokens.get(0).cloned() {
-        tokens.remove(0);
-        let condition = parse_expression(tokens)?;
-        let then_branch = parse_block(tokens)?;
+        tokens.remove(0);  // Entferne `if`
 
-        let else_branch = if let  Some(Token::Else) = tokens.get(0){
-            tokens.remove(0);
-            Some(Box::new(parse_block(tokens)?))
-        }else { None };
+        // Parsen der Bedingung
+        let condition = parse_expression(tokens)?;  // Parse die Bedingung (wie z.B. x > 5)
+
+        // Parsen des Codeblocks für den `then`-Zweig
+        let then_branch = parse_block(tokens)?;  // Parse den Block nach `if`
+
+        // Prüfe, ob es ein `else` gibt
+        let else_branch = if let Some(Token::Else) = tokens.get(0) {
+            tokens.remove(0);  // Entferne `else`
+            Some(Box::new(parse_block(tokens)?))  // Parse den Block nach `else`
+        } else {
+            None
+        };
 
         return Some(ASTNode::If {
-            condition:Box:: new(condition),
-            then_branch:Box::new(then_branch),
-            else_branch:else_branch,
+            condition: Box::new(condition),
+            then_branch: Box::new(then_branch),
+            else_branch,
         });
-
-
     }
     None
 }
 
-pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    if let Some(Token::LeftBrace) = tokens.get(0) {
-        tokens.remove(0);
 
+pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    // Überprüfen, ob der Block mit `{` beginnt
+    if let Some(Token::LeftBrace) = tokens.get(0) {
+        tokens.remove(0);  // Entferne die `{`
 
         let mut statements = Vec::new();
 
-        while let  Some(token)= tokens.get(0) {
-
+        // Parsen der Anweisungen innerhalb des Blocks
+        while let Some(token) = tokens.get(0) {
+            // Wenn wir auf `}` stoßen, wissen wir, dass der Block endet
             if let Token::RightBrace = token {
-                tokens.remove(0);
+                tokens.remove(0);  // Entferne die `}`
                 return Some(ASTNode::Block(statements));  // Gib den Block zurück
-
             }
 
+            // Versuche, den nächsten Ausdruck oder die nächste Anweisung zu parsen
             if let Some(statement) = parse_expression(tokens) {
                 statements.push(statement);
-
-            }else {  println!("Fehler beim Parsen des Blocks");
+            } else {
+                // Fehler: Ungültige Anweisung innerhalb des Blocks
+                println!("Fehler beim Parsen des Blocks");
                 return None;
+            }
+        }
+    }
+
+    // Falls kein `{` gefunden wird oder der Block nicht richtig geschlossen wird, gib `None` zurück
+    println!("Fehler: Block beginnt nicht mit 'leftbrace oder endet nicht mit rightbrace");
+    None
+}
+pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    // Erwarte eine Zahl oder eine Variable auf der linken Seite
+    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        tokens.remove(0);  // Entferne die Variable oder die Zahl
+
+        // Erwarte einen Operator (z.B. `>`, `<`, `==`, `+`, `-`, etc.)
+        if let Some(operator) = tokens.get(0).cloned() {
+            tokens.remove(0);  // Entferne den Operator
+
+            // Erwarte eine Zahl oder eine Variable auf der rechten Seite
+            if let Some(Token::Number(right_val)) = tokens.get(0).cloned() {
+                tokens.remove(0);  // Entferne die rechte Seite
+
+                return Some(ASTNode::BinaryOp {
+                    left: Box::new(ASTNode::Identifier(var_name.clone())),
+                    operator: operator.clone(),
+                    right: Box::new(ASTNode::Number(right_val)),
+                });
             }
         }
     }
