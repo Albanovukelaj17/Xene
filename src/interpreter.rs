@@ -23,6 +23,11 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
                 }
             }
         }
+        ASTNode::Block(statements) => {
+            for statement in statements {
+                interpret(statement, env);  // Führe jede Anweisung im Block aus
+            }
+        }
         ASTNode::If { condition, then_branch, else_branch } => {
             if evaluate_condition(*condition, env) {  // Wenn die Bedingung wahr ist
                 interpret(*then_branch, env);  // Führe den `then`-Zweig aus
@@ -33,4 +38,9 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
         _ => {}  // Weitere Knoten behandeln (wie Schleifen)
     }
 }
-
+pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) -> bool {
+    match condition {
+        ASTNode::Number(val) => val != 0,  // In vielen Sprachen gilt 0 als "falsch"
+        _ => false,  // Weitere Bedingungen kannst du hier hinzufügen
+    }
+}
