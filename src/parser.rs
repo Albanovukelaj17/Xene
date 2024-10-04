@@ -83,7 +83,7 @@ pub fn parse_if(tokens: &mut Vec<Token>)-> Option<ASTNode> {
 }
 
 pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    if let Some(Token::LeftParen) = tokens.get(0) {
+    if let Some(Token::LeftBrace) = tokens.get(0) {
         tokens.remove(0);
 
 
@@ -91,7 +91,7 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
         while let  Some(token)= tokens.get(0) {
 
-            if let Token::RightParen = token {
+            if let Token::RightBrace = token {
                 tokens.remove(0);
                 return Some(ASTNode::Block(statements));  // Gib den Block zurück
 
