@@ -58,3 +58,26 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     }
     None
 }
+
+
+pub fn parse_if(tokens: &mut Vec<Token>)-> Option<ASTNode> {
+    if let Some(Token::If) = tokens.get(0).cloned() {
+        tokens.remove(0);
+        let condition = parse_expression(tokens)?;
+        let then_branch = parse_block(tokens)?;
+
+        let else_branch = if let  Some(Token::Else) = tokens.get(0){
+            tokens.remove(0);
+            Some(parse_block(tokens)?)
+        }else { None };
+
+        return Some(ASTNode::If {
+            condition:Box:: new(condition),
+            then_branch:Box::new(then_branch),
+            else_branch:else_branch,
+        });
+
+
+    }
+    None
+}
