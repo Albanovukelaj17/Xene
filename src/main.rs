@@ -27,14 +27,14 @@ fn main() {
             break;
         }
 
-        let tokens = tokenize(trimmed);
+        let mut tokens = tokenize(trimmed);
 
         // Versuche zuerst, eine Zuweisung zu parsen
-        if let Some(ast) = parse_assignment(&tokens) {
+        if let Some(ast) = parse_assignment(&mut tokens) {
             interpret(ast, &mut env);  // Interpretiere den AST und führe die Zuweisung aus
         }
         // Versuche eine Expression zu parsen
-        else if let Some(ast) = parse_expression(&tokens) {
+        else if let Some(ast) = parse_expression(&mut tokens) {
             interpret(ast, &mut env);  // Interpretiere die Expression (arithmetische Operation)
         } else {
             println!("Ungültiger Ausdruck!");

@@ -1,10 +1,21 @@
 use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
 
 #[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ASTNode {
     Assignment { var_name: String, value: Box<ASTNode> },
     Number(i64),
     BinaryOp { left: Box<ASTNode>, operator: Token, right: Box<ASTNode> },
+    // Neue Knoten für If und While hinzufügen
+    If {
+        condition: Box<ASTNode>,
+        then_branch: Box<ASTNode>,
+        else_branch: Option<Box<ASTNode>>,
+    },
+    While {
+        condition: Box<ASTNode>,
+        body: Box<ASTNode>,
+    },
 }
 
 pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
