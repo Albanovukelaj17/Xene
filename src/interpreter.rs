@@ -23,6 +23,14 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
                 }
             }
         }
-        _ => {}
+        ASTNode::If { condition, then_branch, else_branch } => {
+            if evaluate_condition(*condition, env) {  // Wenn die Bedingung wahr ist
+                interpret(*then_branch, env);  // Führe den `then`-Zweig aus
+            } else if let Some(else_branch) = else_branch {  // Sonst, falls ein `else`-Zweig existiert
+                interpret(*else_branch, env);
+            }
+        }
+        _ => {}  // Weitere Knoten behandeln (wie Schleifen)
     }
 }
+

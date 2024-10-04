@@ -1,11 +1,11 @@
 use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
 
-#[derive(Debug)]
 #[derive(Debug, Clone)]
 pub enum ASTNode {
     Assignment { var_name: String, value: Box<ASTNode> },
     Number(i64),
     BinaryOp { left: Box<ASTNode>, operator: Token, right: Box<ASTNode> },
+    Block(Vec<ASTNode>),
     // Neue Knoten für If und While hinzufügen
     If {
         condition: Box<ASTNode>,
@@ -68,7 +68,7 @@ pub fn parse_if(tokens: &mut Vec<Token>)-> Option<ASTNode> {
 
         let else_branch = if let  Some(Token::Else) = tokens.get(0){
             tokens.remove(0);
-            Some(parse_block(tokens)?)
+            Some(Box::new(parse_block(tokens)?))
         }else { None };
 
         return Some(ASTNode::If {
@@ -92,10 +92,18 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         while let  Some(token)= tokens.get(0) {
 
             if let Token::RightParen = token {
-                token.remove(0);
+                tokens.remove(0);
                 return Some(ASTNode::Block(statements));  // Gib den Block zurück
 
             }
+
+            if let Some(statement) = parse_expression(tokens) {
+                statements.push(statement);
+
+            }else {  println!("Fehler beim Parsen des Blocks");
+                return None;
+            }
         }
     }
+    None
 }
