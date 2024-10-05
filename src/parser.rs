@@ -44,13 +44,53 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Current token in parse_expression: {:?}", tokens.get(0));
 
-    // Prüfe, ob es sich um einen binären Ausdruck handelt, wie `x > 5`
+    // Handhabung für `print`
+    if let Some(Token::Print) = tokens.get(0) {
+        tokens.remove(0);  // Entferne `print`
+
+        // Erwarte die öffnende Klammer `(`
+        if let Some(Token::LeftParen) = tokens.get(0) {
+            println!("Erkannte öffnende Klammer `(`");
+            tokens.remove(0);  // Entferne `(`
+
+            // Erwarte den Ausdruck innerhalb der Klammern (z.B. eine Variable)
+            if let Some(expression) = parse_primary_expression(tokens) {
+                println!("Current token in parse_expression: {:?}", tokens.get(0));
+
+                // Erwarte die schließende Klammer `)`
+                if let Some(Token::RightParen) = tokens.get(0) {
+                    println!("Erkannte schließende Klammer `)`");
+                    tokens.remove(0);  // Entferne `)`
+
+                    // Jetzt sollte ein Semikolon `;` folgen
+                    if let Some(Token::Semicolon) = tokens.get(0) {
+                        println!("Erkannte Semikolon `;` nach Ausdruck");
+                        tokens.remove(0);  // Entferne das Semikolon
+                        return Some(ASTNode::Print(Box::new(expression)));  // Gib die `print`-Anweisung zurück
+                    } else {
+                        println!("Fehler: Fehlendes Semikolon nach `print`");
+                        return None;
+                    }
+                } else {
+                    println!("Fehler: Fehlende schließende Klammer `)` nach Ausdruck");
+                    return None;
+                }
+            } else {
+                println!("Fehler: Ungültiger Ausdruck in `print`");
+                return None;
+            }
+        } else {
+            println!("Fehler: Fehlende öffnende Klammer `(` nach `print`");
+            return None;
+        }
+    }
+
+    // Falls es keine `print`-Anweisung ist, versuche eine andere Expression
     if let Some(left) = parse_primary_expression(tokens) {
         if let Some(operator) = tokens.get(0).cloned() {
             tokens.remove(0);  // Entferne den Operator
             match operator {
                 Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual => {
-                    // Erwarte eine rechte Seite
                     if let Some(right) = parse_primary_expression(tokens) {
                         return Some(ASTNode::BinaryOp {
                             left: Box::new(left),
@@ -63,12 +103,12 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                     }
                 }
                 _ => {
-                    // Kein binärer Operator, gib einfach den linken Ausdruck zurück
                     return Some(left);
                 }
             }
         }
     }
+
     None
 }
 

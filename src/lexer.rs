@@ -44,21 +44,25 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '*' => tokens.push(Token::Multiply),
             '/' => tokens.push(Token::Divide),
             '%' => tokens.push(Token::Modulo),
-            '(' => tokens.push(Token::LeftParen),
-            ')' => tokens.push(Token::RightParen),
+            '(' => {
+                println!("Erkannte öffnende Klammer `(`");
+                tokens.push(Token::LeftParen);
+            }
+            ')' => {
+                println!("Erkannte schließende Klammer `)`");
+                tokens.push(Token::RightParen);
+            }
             '{' => tokens.push(Token::LeftBrace),  // Neu hinzugefügt
             '}' => tokens.push(Token::RightBrace), // Neu hinzugefügt
             '>' => {
-                // Prüfe, ob es ein `>=` ist
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
                     tokens.push(Token::GreaterEqual);
-                    i += 1;  // Überspringe das nächste Zeichen
+                    i += 1;
                 } else {
                     tokens.push(Token::GreaterThan);
                 }
             }
             '<' => {
-                // Prüfe, ob es ein `<=` ist
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
                     tokens.push(Token::LessEqual);
                     i += 1;
@@ -67,39 +71,32 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
             }
             ';' => tokens.push(Token::Semicolon),
-            ' ' | '\n' => {}  // Ignoriere Leerzeichen und Zeilenumbrüche
+            ' ' | '\n' => {},  // Ignoriere Leerzeichen und Zeilenumbrüche
             c if c.is_digit(10) => {
-                // Erkenne Zahlen
                 let mut num = String::new();
                 while i < chars.len() && chars[i].is_digit(10) {
                     num.push(chars[i]);
                     i += 1;
                 }
-                i -= 1;  // Schritt zurück, da die Schleife einen Schritt zu weit gegangen ist
+                i -= 1;
                 tokens.push(Token::Number(num.parse::<i64>().unwrap()));
             }
             c if c.is_alphabetic() => {
-                // Erkenne Variablennamen oder Schlüsselwörter
                 let mut ident = String::new();
                 while i < chars.len() && chars[i].is_alphabetic() {
                     ident.push(chars[i]);
                     i += 1;
                 }
                 i -= 1;
-                // Prüfe, ob es ein Schlüsselwort ist
                 match ident.as_str() {
                     "var" => tokens.push(Token::Var),
-                    "print" => tokens.push(Token::Print),  // Füge das `Print`-Token hinzu
+                    "print" => tokens.push(Token::Print),
                     "if" => tokens.push(Token::If),
                     "else" => tokens.push(Token::Else),
-                    _ => tokens.push(Token::Identifier(ident)),  // Variablenname
+                    _ => tokens.push(Token::Identifier(ident)),
                 }
             }
-
-
-            _ => {
-                println!("Unbekanntes Zeichen: {}", chars[i]);  // Fehler bei unbekannten Zeichen
-            }
+            _ => println!("Unbekanntes Zeichen: {}", chars[i]),
         }
         i += 1;
     }
