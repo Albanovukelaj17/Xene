@@ -89,12 +89,13 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 // Prüfe, ob es ein Schlüsselwort ist
                 match ident.as_str() {
                     "var" => tokens.push(Token::Var),
-                    "print" => tokens.push(Token::Print),
+                    "print" => tokens.push(Token::Print),  // Füge das `Print`-Token hinzu
                     "if" => tokens.push(Token::If),
                     "else" => tokens.push(Token::Else),
                     _ => tokens.push(Token::Identifier(ident)),  // Variablenname
                 }
             }
+
 
             _ => {
                 println!("Unbekanntes Zeichen: {}", chars[i]);  // Fehler bei unbekannten Zeichen

@@ -1,13 +1,13 @@
 use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
 
 #[derive(Debug, Clone)]
+
 pub enum ASTNode {
     Assignment { var_name: String, value: Box<ASTNode> },
     Number(i64),
-    Identifier(String),
+    Identifier(String),  // Um Variablen wie `x` zu repräsentieren
     BinaryOp { left: Box<ASTNode>, operator: Token, right: Box<ASTNode> },
     Block(Vec<ASTNode>),
-    // Neue Knoten für If und While hinzufügen
     If {
         condition: Box<ASTNode>,
         then_branch: Box<ASTNode>,
@@ -17,8 +17,9 @@ pub enum ASTNode {
         condition: Box<ASTNode>,
         body: Box<ASTNode>,
     },
-    Print(String)
+    Print(Box<ASTNode>),  // Füge dies hinzu, um die `print`-Anweisung zu unterstützen
 }
+
 
 pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::Var) = tokens.get(0).cloned() {
@@ -41,25 +42,46 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    // Beispiel für eine `print`-Anweisung
-    if let Some(Token::Print) = tokens.get(0) {
-        tokens.remove(0);  // Entferne das `print`-Token
+    println!("Current token in parse_expression: {:?}", tokens.get(0));
 
-        // Erwarte eine Variable oder einen Ausdruck nach `print`
-        if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-            tokens.remove(0);  // Entferne die Variable
-
-            // Erwarte ein Semikolon nach der Anweisung
-            if let Some(Token::Semicolon) = tokens.get(0) {
-                tokens.remove(0);  // Entferne das Semikolon
-                return Some(ASTNode::Print(var_name));  // Gib die `print`-Anweisung zurück
+    // Prüfe, ob es sich um einen binären Ausdruck handelt, wie `x > 5`
+    if let Some(left) = parse_primary_expression(tokens) {
+        if let Some(operator) = tokens.get(0).cloned() {
+            tokens.remove(0);  // Entferne den Operator
+            match operator {
+                Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual => {
+                    // Erwarte eine rechte Seite
+                    if let Some(right) = parse_primary_expression(tokens) {
+                        return Some(ASTNode::BinaryOp {
+                            left: Box::new(left),
+                            operator,
+                            right: Box::new(right),
+                        });
+                    } else {
+                        println!("Fehler: Erwarte rechten Ausdruck nach Operator");
+                        return None;
+                    }
+                }
+                _ => {
+                    // Kein binärer Operator, gib einfach den linken Ausdruck zurück
+                    return Some(left);
+                }
             }
         }
     }
+    None
+}
 
-    // Andere Ausdrücke (wie arithmetische Operationen) parsen
-    if let Some(ast) = parse_binary_op(tokens) {
-        return Some(ast);
+pub fn parse_primary_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    // Prüfe auf Zahlen oder Variablen als primäre Ausdrücke
+    if let Some(Token::Number(value)) = tokens.get(0).cloned() {
+        tokens.remove(0);
+        return Some(ASTNode::Number(value));
+    }
+
+    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        tokens.remove(0);
+        return Some(ASTNode::Identifier(var_name));
     }
 
     None
@@ -68,17 +90,13 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::If) = tokens.get(0).cloned() {
         tokens.remove(0);  // Entferne `if`
+        let condition = parse_expression(tokens)?;  // Parse die Bedingung
+        let then_branch = parse_block(tokens)?;  // Parse den `then`-Block
 
-        // Parsen der Bedingung
-        let condition = parse_expression(tokens)?;  // Parse die Bedingung (wie z.B. x > 5)
-
-        // Parsen des Codeblocks für den `then`-Zweig
-        let then_branch = parse_block(tokens)?;  // Parse den Block nach `if`
-
-        // Prüfe, ob es ein `else` gibt
+        // Prüfe, ob es einen `else`-Block gibt
         let else_branch = if let Some(Token::Else) = tokens.get(0) {
             tokens.remove(0);  // Entferne `else`
-            Some(Box::new(parse_block(tokens)?))  // Parse den Block nach `else`
+            Some(Box::new(parse_block(tokens)?))  // Verpacke den else-Block in eine Box
         } else {
             None
         };
@@ -86,13 +104,13 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         return Some(ASTNode::If {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
-            else_branch,
+            else_branch,  // Verwende die Box für else_branch
         });
     }
     None
 }
 
-
+//if x > 5 { print(x); } else { print(0); }
 pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     // Überprüfen, ob der Block mit `{` beginnt
     if let Some(Token::LeftBrace) = tokens.get(0) {
@@ -102,6 +120,8 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
         // Parsen der Anweisungen innerhalb des Blocks
         while let Some(token) = tokens.get(0) {
+            println!("Current token: {:?}", token);  // Debugging-Ausgabe
+
             // Wenn wir auf `}` stoßen, wissen wir, dass der Block endet
             if let Token::RightBrace = token {
                 tokens.remove(0);  // Entferne die `}`
@@ -119,10 +139,10 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         }
     }
 
-    // Falls kein `{` gefunden wird oder der Block nicht richtig geschlossen wird, gib `None` zurück
-    println!("Fehler: Block beginnt nicht mit 'leftbrace oder endet nicht mit rightbrace");
+    println!("Fehler: Block beginnt nicht mit `brace`");
     None
 }
+
 pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     // Erwarte eine Zahl oder eine Variable auf der linken Seite
     if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
