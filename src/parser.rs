@@ -156,6 +156,26 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 //if x > 5 { print(x); } else { print(0); }
+
+pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    if let Some(Token::While) = tokens.get(0).cloned() {
+        tokens.remove(0);  // Entferne `while`
+
+        // Parse die Bedingung für das `while`-Statement
+        let condition = parse_expression(tokens)?;
+
+        // Erwarte, dass der Block für den `while`-Body mit `{` beginnt
+        let body = parse_block(tokens)?;
+
+        // Gib den `while`-Knoten zurück
+        return Some(ASTNode::While {
+            condition: Box::new(condition),
+            body: Box::new(body),
+        });
+    }
+    None
+}
+
 pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     // Überprüfen, ob der Block mit `{` beginnt
     if let Some(Token::LeftBrace) = tokens.get(0) {
