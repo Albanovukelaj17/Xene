@@ -133,18 +133,23 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         let condition = parse_expression(tokens)?;  // Parse die Bedingung
         let then_branch = parse_block(tokens)?;  // Parse den `then`-Block
 
-        // Prüfe, ob es einen `else`-Block gibt
+        println!("Parsed `then` branch");
+
         let else_branch = if let Some(Token::Else) = tokens.get(0) {
             tokens.remove(0);  // Entferne `else`
-            Some(Box::new(parse_block(tokens)?))  // Verpacke den else-Block in eine Box
+            Some(Box::new(parse_block(tokens)?))  // Parse den `else`-Block
         } else {
             None
         };
 
+        println!("Parsed `else` branch");
+
+        // Der gesamte `if-else`-Ausdruck ist jetzt abgeschlossen
+        println!("`if-else`-Ausdruck abgeschlossen.");
         return Some(ASTNode::If {
             condition: Box::new(condition),
             then_branch: Box::new(then_branch),
-            else_branch,  // Verwende die Box für else_branch
+            else_branch,
         });
     }
     None
