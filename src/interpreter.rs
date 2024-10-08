@@ -35,12 +35,31 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
                 interpret(*else_branch, env);
             }
         }
-        _ => {}  // Weitere Knoten behandeln (wie Schleifen)
+
+        ASTNode::While { condition, body } =>
+            {
+                while  evaluate_condition(*condition.clone(),env){
+                    interpret(*body.clone(), env);
+                }
+            }
+    _ => {}
     }
 }
 pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) -> bool {
     match condition {
-        ASTNode::Number(val) => val != 0,  // In vielen Sprachen gilt 0 als "falsch"
-        _ => false,  // Weitere Bedingungen kannst du hier hinzufügen
+        ASTNode::Number(val) => val != 0,  // Wenn die Zahl `0` ist, ist die Bedingung falsch
+        ASTNode::BinaryOp { left, operator, right } => {
+            let left_val = evaluate_condition(*left, env) as i64;
+            let right_val = evaluate_condition(*right, env) as i64;
+
+            match operator {
+                Token::GreaterThan => left_val > right_val,
+                Token::LessThan => left_val < right_val,
+                Token::GreaterEqual => left_val >= right_val,
+                Token::LessEqual => left_val <= right_val,
+                _ => false,
+            }
+        }
+        _ => false,  // Alle anderen Bedingungen sind ungültig
     }
 }

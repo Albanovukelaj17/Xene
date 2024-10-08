@@ -161,13 +161,13 @@ pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::While) = tokens.get(0).cloned() {
         tokens.remove(0);  // Entferne `while`
 
-        // Parse die Bedingung für das `while`-Statement
-        let condition = parse_expression(tokens)?;
+        // Parse die Bedingung der Schleife
+        let condition = parse_expression(tokens)?;  // Die Bedingung sollte z.B. `x > 5` sein
 
-        // Erwarte, dass der Block für den `while`-Body mit `{` beginnt
-        let body = parse_block(tokens)?;
+        // Erwarte die öffnende geschweifte Klammer `{` für den Schleifenbody
+        let body = parse_block(tokens)?;  // Parsen des Schleifenbodys, z.B. `{ print(x); }`
 
-        // Gib den `while`-Knoten zurück
+        // Gib den AST-Knoten für die `while`-Schleife zurück
         return Some(ASTNode::While {
             condition: Box::new(condition),
             body: Box::new(body),
@@ -175,6 +175,7 @@ pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     }
     None
 }
+
 
 pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     // Überprüfen, ob der Block mit `{` beginnt

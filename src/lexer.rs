@@ -93,6 +93,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "print" => tokens.push(Token::Print),
                     "if" => tokens.push(Token::If),
                     "else" => tokens.push(Token::Else),
+                    "while" => tokens.push(Token::While),
                     _ => tokens.push(Token::Identifier(ident)),
                 }
             }
