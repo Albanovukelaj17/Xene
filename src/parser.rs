@@ -155,8 +155,8 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     None
 }
 
-//if x > 5 { print(x); } else { print(0); }
-
+//      if x > 5 { print(x); } else { print(0); }
+//      while x > 5 { print(x); }
 pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::While) = tokens.get(0).cloned() {
         tokens.remove(0);  // Entferne `while`
