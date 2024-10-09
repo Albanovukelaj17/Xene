@@ -269,3 +269,25 @@ pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
     None
 }
+
+
+mod tests {
+    use super::*;
+    use crate::lexer::tokenize;
+
+    #[test]
+    fn test_parse_assignment() {
+        let input = "var x = 10;";
+        let mut tokens = tokenize(input);
+        let ast = parse_assignment(&mut tokens);
+        assert!(ast.is_some());
+    }
+
+    #[test]
+    fn test_parse_expression() {
+        let input = "x = x - 1;";
+        let mut tokens = tokenize(input);
+        let ast = parse_expression(&mut tokens);
+        assert!(ast.is_some());
+    }
+}

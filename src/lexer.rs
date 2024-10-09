@@ -105,3 +105,22 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     tokens.push(Token::Eof); // Füge am Ende des Codes ein EOF-Token hinzu
     tokens
 }
+
+
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokenize_var_assignment() {
+        let input = "var x = 10;";
+        let tokens = tokenize(input);
+        assert_eq!(tokens.len(), 5);  // var, x, =, 10, ;
+    }
+
+    #[test]
+    fn test_tokenize_binary_expression() {
+        let input = "x = x - 1;";
+        let tokens = tokenize(input);
+        assert_eq!(tokens.len(), 6);  // x, =, x, -, 1, ;
+    }
+}

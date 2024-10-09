@@ -103,3 +103,33 @@ pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) ->
 
 //      var x = 10;
 //      while x > 5 { print(x); x = x - 1; }
+
+
+mod tests {
+    use super::*;
+    use crate::lexer::tokenize;
+    use crate::parser::{parse_assignment, parse_expression};
+
+    #[test]
+    fn test_interpreter_with_assignment() {
+        let input = "var x = 10;";
+        let mut tokens = tokenize(input);
+        let mut env = HashMap::new();
+        if let Some(ast) = parse_assignment(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+        assert_eq!(*env.get("x").unwrap(), 10);
+    }
+
+    #[test]
+    fn test_interpreter_with_expression() {
+        let input = "x = x - 1;";
+        let mut env = HashMap::new();
+        env.insert("x".to_string(), 10);
+        let mut tokens = tokenize(input);
+        if let Some(ast) = parse_expression(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+        assert_eq!(*env.get("x").unwrap(), 9);
+    }
+}
