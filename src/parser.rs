@@ -44,27 +44,51 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Current token in parse_expression: {:?}", tokens.get(0));
 
+    // Überprüfen, ob es sich um eine Zuweisung handelt (z.B. `x = x - 1`)
+    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        println!("Erkannte Identifier für Zuweisung: {}", var_name);
+        tokens.remove(0);  // Entferne die Variable (z.B. `x`)
+
+        // Überprüfen, ob ein Gleichheitszeichen folgt (z.B. `=`)
+        if let Some(Token::Equal) = tokens.get(0).cloned() {
+            println!("Erkannte Gleichheitszeichen `=`");
+            tokens.remove(0);  // Entferne das Gleichheitszeichen `=`
+
+            // Versuche, den gesamten Ausdruck auf der rechten Seite zu parsen (z.B. `x - 1`)
+            if let Some(right_expr) = parse_binary_op(tokens) {
+                println!("Parsed rechter Ausdruck für Zuweisung: {:?}", right_expr);
+                // Erstelle einen Zuweisungsknoten
+                return Some(ASTNode::Assignment {
+                    var_name,
+                    value: Box::new(right_expr),
+                });
+            } else {
+                println!("Fehler: Erwarte rechten Ausdruck nach `=`");
+                return None;
+            }
+        } else {
+            println!("Kein Gleichheitszeichen gefunden, Rückgabe der einfachen Variable: {}", var_name);
+            // Falls kein Gleichheitszeichen vorhanden ist, handelt es sich möglicherweise um eine einfache Variable
+            return Some(ASTNode::Identifier(var_name));
+        }
+    }
+
     // Handhabung für `print`
     if let Some(Token::Print) = tokens.get(0) {
         tokens.remove(0);  // Entferne `print`
 
         // Erwarte die öffnende Klammer `(`
         if let Some(Token::LeftParen) = tokens.get(0) {
-            println!("Erkannte öffnende Klammer `(`");
             tokens.remove(0);  // Entferne `(`
 
             // Erwarte den Ausdruck innerhalb der Klammern (z.B. eine Variable)
             if let Some(expression) = parse_primary_expression(tokens) {
-                println!("Current token in parse_expression: {:?}", tokens.get(0));
-
                 // Erwarte die schließende Klammer `)`
                 if let Some(Token::RightParen) = tokens.get(0) {
-                    println!("Erkannte schließende Klammer `)`");
                     tokens.remove(0);  // Entferne `)`
 
                     // Jetzt sollte ein Semikolon `;` folgen
                     if let Some(Token::Semicolon) = tokens.get(0) {
-                        println!("Erkannte Semikolon `;` nach Ausdruck");
                         tokens.remove(0);  // Entferne das Semikolon
                         return Some(ASTNode::Print(Box::new(expression)));  // Gib die `print`-Anweisung zurück
                     } else {
@@ -87,11 +111,14 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
     // Falls es keine `print`-Anweisung ist, versuche eine andere Expression
     if let Some(left) = parse_primary_expression(tokens) {
+        println!("Parsed linker Ausdruck: {:?}", left);
         if let Some(operator) = tokens.get(0).cloned() {
+            println!("Erkannter Operator: {:?}", operator);
             tokens.remove(0);  // Entferne den Operator
             match operator {
-                Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual => {
+                Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual | Token::Minus | Token::Plus => {
                     if let Some(right) = parse_primary_expression(tokens) {
+                        println!("Parsed rechter Ausdruck nach Operator: {:?}", right);
                         return Some(ASTNode::BinaryOp {
                             left: Box::new(left),
                             operator,
@@ -113,17 +140,22 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_primary_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    println!("Current token in parse_primary_expression: {:?}", tokens.get(0));
+
     // Prüfe auf Zahlen oder Variablen als primäre Ausdrücke
     if let Some(Token::Number(value)) = tokens.get(0).cloned() {
+        println!("Erkannte Zahl: {}", value);
         tokens.remove(0);
         return Some(ASTNode::Number(value));
     }
 
     if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        println!("Erkannte Variable: {}", var_name);
         tokens.remove(0);
         return Some(ASTNode::Identifier(var_name));
     }
 
+    println!("Fehler: Kein gültiger primärer Ausdruck gefunden");
     None
 }
 
@@ -186,11 +218,12 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
         // Parsen der Anweisungen innerhalb des Blocks
         while let Some(token) = tokens.get(0) {
-            println!("Current token: {:?}", token);  // Debugging-Ausgabe
+            println!("Current token in parse_block: {:?}", token);  // Debugging-Ausgabe
 
             // Wenn wir auf `}` stoßen, wissen wir, dass der Block endet
             if let Token::RightBrace = token {
                 tokens.remove(0);  // Entferne die `}`
+                println!("End of block detected.");  // Debugging
                 return Some(ASTNode::Block(statements));  // Gib den Block zurück
             }
 
@@ -199,36 +232,40 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 statements.push(statement);
             } else {
                 // Fehler: Ungültige Anweisung innerhalb des Blocks
-                println!("Fehler beim Parsen des Blocks");
+                println!("Fehler beim Parsen des Blocks.");
                 return None;
             }
         }
+
+        // Falls die Schleife endet, ohne ein `}` zu finden, liegt ein Fehler vor
+        println!("Fehler: Kein `brace` gefunden, Block wurde nicht richtig geschlossen.");
+        return None;
     }
 
-    println!("Fehler: Block beginnt nicht mit `brace`");
+    println!("Fehler: Block beginnt nicht mit `brace`.");
     None
 }
 
 pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    // Erwarte eine Zahl oder eine Variable auf der linken Seite
-    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-        tokens.remove(0);  // Entferne die Variable oder die Zahl
-
-        // Erwarte einen Operator (z.B. `>`, `<`, `==`, `+`, `-`, etc.)
+    if let Some(left) = parse_primary_expression(tokens) {
         if let Some(operator) = tokens.get(0).cloned() {
             tokens.remove(0);  // Entferne den Operator
 
-            // Erwarte eine Zahl oder eine Variable auf der rechten Seite
-            if let Some(Token::Number(right_val)) = tokens.get(0).cloned() {
-                tokens.remove(0);  // Entferne die rechte Seite
-
+            // Parsen des rechten Ausdrucks
+            if let Some(right) = parse_primary_expression(tokens) {
                 return Some(ASTNode::BinaryOp {
-                    left: Box::new(ASTNode::Identifier(var_name.clone())),
-                    operator: operator.clone(),
-                    right: Box::new(ASTNode::Number(right_val)),
+                    left: Box::new(left),
+                    operator,
+                    right: Box::new(right),
                 });
+            } else {
+                println!("Fehler: Erwarte rechten Ausdruck nach Operator");
+                return None;
             }
+        } else {
+            return Some(left);  // Falls kein Operator folgt, gib einfach den linken Ausdruck zurück
         }
     }
+
     None
 }

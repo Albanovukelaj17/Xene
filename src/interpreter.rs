@@ -1,84 +1,87 @@
 use std::collections::HashMap;
-use crate::lexer::Token;  // Damit der Token-Typ bekannt ist
-use crate::parser::ASTNode;  // Damit die AST-Struktur bekannt ist
+use crate::lexer::Token;
+use crate::parser::ASTNode;
 
 pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
     match ast {
-        // Zuweisung von Variablen
+        // Zuweisung von Variablen (z.B. `x = x - 1`)
         ASTNode::Assignment { var_name, value } => {
-            let val = evaluate_expression(*value, env);  // Berechne den Wert des Ausdrucks
-            env.insert(var_name, val);  // Setze den neuen Wert der Variablen in der Umgebung
+            // Überprüfen, ob die Variable bereits existiert
+            if let Some(&old_val) = env.get(&var_name) {
+                println!("Alter Wert von {}: {}", var_name, old_val);
+
+                // Wert der rechten Seite auswerten (z.B. `x - 1`)
+                let new_val = evaluate_expression(*value, env);
+                println!("Berechne neuen Wert von {}: {}", var_name, new_val);
+
+                // Aktualisiere den Wert in der Umgebung
+                env.insert(var_name.clone(), new_val);
+                println!("Wert von {} nach Zuweisung: {}", var_name, new_val);
+            } else {
+                // Falls die Variable neu ist, weise den Wert zu
+                let val = evaluate_expression(*value, env);
+                println!("Zuweisung (neue Variable): {} = {}", var_name, val);
+                env.insert(var_name.clone(), val);
+            }
         }
 
-        // Verarbeitung des `print`-Statements
+        // Print-Anweisung
         ASTNode::Print(expr) => {
-            let val = evaluate_expression(*expr, env);  // Berechne den Ausdruck
-            println!("{}", val);  // Gib den Wert der Variablen aus
+            let val = evaluate_expression(*expr, env);
+            println!("print: {}", val);  // Gib den Wert aus
         }
 
-        // Verarbeitung der `while`-Schleife
-        ASTNode::While { condition, body } => {
-            while evaluate_condition(*condition.clone(), env) {  // Auswertung der Bedingung
-                interpret(*body.clone(), env);  // Führe den Body der Schleife aus
-            }
-        }
-
-        // Verarbeitung von Blöcken
-        ASTNode::Block(statements) => {
-            for statement in statements {
-                interpret(statement, env);  // Führe jede Anweisung im Block aus
-            }
-        }
-
-        // Verarbeitung von `if`-Statements
-        ASTNode::If { condition, then_branch, else_branch } => {
-            if evaluate_condition(*condition, env) {  // Wenn die Bedingung wahr ist
-                interpret(*then_branch, env);  // Führe den `then`-Zweig aus
-            } else if let Some(else_branch) = else_branch {  // Sonst, falls ein `else`-Zweig existiert
-                interpret(*else_branch, env);
-            }
-        }
-
+        // Weitere Anweisungen wie `if`, `while`, etc.
         _ => {}
     }
 }
 
-// Hilfsfunktion zur Auswertung von Ausdrücken (Zahlen und Variablen)
+// Hilfsfunktion zur Auswertung von Ausdrücken
 pub fn evaluate_expression(expr: ASTNode, env: &mut HashMap<String, i64>) -> i64 {
     match expr {
-        ASTNode::Number(val) => val,  // Gib die Zahl direkt zurück
+        // Wenn der Ausdruck eine Zahl ist, gib diese zurück
+        ASTNode::Number(val) => val,
+
+        // Wenn der Ausdruck eine Variable ist, hole ihren Wert aus der Umgebung
         ASTNode::Identifier(var_name) => {
             if let Some(&val) = env.get(&var_name) {
-                val  // Gib den Wert der Variablen zurück
+                println!("Wert von {}: {}", var_name, val);  // Debugging-Ausgabe
+                val
             } else {
-                panic!("Fehler: Unbekannte Variable `{}`", var_name);
+                panic!("Unbekannte Variable: {}", var_name);
             }
         }
+
+        // Wenn der Ausdruck eine binäre Operation ist, führe die Operation aus
         ASTNode::BinaryOp { left, operator, right } => {
-            let left_val = evaluate_expression(*left, env);
-            let right_val = evaluate_expression(*right, env);
+            let left_val = evaluate_expression(*left, env);  // Linken Ausdruck auswerten
+            let right_val = evaluate_expression(*right, env);  // Rechten Ausdruck auswerten
+
+            println!("Berechne: {} {:?} {}", left_val, operator, right_val);  // Debugging-Ausgabe
 
             match operator {
                 Token::Plus => left_val + right_val,
                 Token::Minus => left_val - right_val,
                 Token::Multiply => left_val * right_val,
                 Token::Divide => left_val / right_val,
-                _ => panic!("Fehler: Unbekannter Operator"),
+                _ => panic!("Unbekannter Operator"),
             }
         }
-        _ => panic!("Fehler: Ungültiger Ausdruck"),
+
+        _ => panic!("Ungültiger Ausdruck"),
     }
 }
 
 // Funktion zur Auswertung von Bedingungen
 pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) -> bool {
     match condition {
-        ASTNode::Number(val) => val != 0,  // Wenn die Zahl `0` ist, ist die Bedingung falsch
+        ASTNode::Number(val) => val != 0,
         ASTNode::Identifier(var_name) => {
             if let Some(&val) = env.get(&var_name) {
-                val != 0  // Wenn der Wert nicht `0` ist, ist die Bedingung `true`
+                println!("Bedingung für {}: {}", var_name, val != 0);  // Debugging
+                val != 0
             } else {
-                false  // Wenn die Variable nicht existiert, ist die Bedingung `false`
+                false
             }
         }
         ASTNode::BinaryOp { left, operator, right } => {
@@ -93,6 +96,10 @@ pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) ->
                 _ => false,
             }
         }
-        _ => false,  // Alle anderen Bedingungen sind ungültig
+        _ => false,
     }
 }
+
+
+//      var x = 10;
+//      while x > 5 { print(x); x = x - 1; }
