@@ -1,36 +1,30 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug,PartialEq)]
 #[allow(dead_code)]
-pub enum Token{
-    Var, // Schlüsselwort `le or c´var t`
-    Identifier(String),  // Variablenname
-    Number(i64),         // Ganzzahl-Zahl
-    Float(f64),          // Gleitkommazahl
-    Equal,               // Gleichheitszeichen `=`
-    Plus,                // Pluszeichen `+`
-    Minus,               // Minuszeichen `-`
-    Multiply,            // Multiplikationszeichen `*`
-    Divide,              // Divisionszeichen `/`
-    Modulo,              // MOdulo %
-    LeftParen,           // `(`
-    RightParen,          // `)`
-    LeftBrace,          // `{` (neu hinzugefügt)
-    RightBrace,         // `}` (neu hinzugefügt)
-    GreaterThan,        // `>` (neu hinzugefügt)
-    LessThan,           // `<` (neu hinzugefügt)
-    GreaterEqual,       // `>=` (neu hinzugefügt)
-    LessEqual,          // `<=` (neu hinzugefügt)
-    Semicolon,           // `;`
-    Print,               // Schlüsselwort `print`
-    If,                  // Schlüsselwort `if`
-    Else,                // Schlüsselwort `else`
-    While,               // Schlüsselwort 'while'
-    For,                 // Schlüsselwort 'for'
-    Switch,              // Schlüsselwort 'switch'
-    Eof,                 // Ende des Codes
-
-
+pub enum Token {
+    Var,
+    Identifier(String),
+    Number(i64),
+    Equal,
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Modulo,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    GreaterThan,
+    LessThan,
+    GreaterEqual,
+    LessEqual,
+    Semicolon,
+    Print,
+    If,
+    Else,
+    While,
+    Eof,
 }
-
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();  // Liste der erkannten Tokens
     let chars: Vec<char> = input.chars().collect();  // Wandelt den Eingabetext in eine Zeichenliste um
@@ -114,13 +108,48 @@ mod tests {
     fn test_tokenize_var_assignment() {
         let input = "var x = 10;";
         let tokens = tokenize(input);
-        assert_eq!(tokens.len(), 5);  // var, x, =, 10, ;
+        assert_eq!(tokens.len(), 6);  // var, x, =, 10, ; ,eof
     }
 
     #[test]
     fn test_tokenize_binary_expression() {
         let input = "x = x - 1;";
         let tokens = tokenize(input);
-        assert_eq!(tokens.len(), 6);  // x, =, x, -, 1, ;
+        assert_eq!(tokens.len(), 7);  // x, =, x, -, 1, ; , eof
     }
+
+    #[test]
+    fn test_tokenize_condition() {
+        let input = "if x >= 10;";
+        let tokens = tokenize(input);
+        assert_eq!(tokens.len(), 6);  // if, x, >=, 10, ;, Eof
+
+        assert_eq!(tokens[0], Token::If);
+        assert!(matches!(tokens[1], Token::Identifier(_)));
+        assert_eq!(tokens[2], Token::GreaterEqual);
+        assert!(matches!(tokens[3], Token::Number(10)));
+        assert_eq!(tokens[4], Token::Semicolon);
+        assert_eq!(tokens[5], Token::Eof);
+    }
+    #[test]
+    fn test_tokenize_multiple_statements() {
+        let input = "var x = 5; x = x + 1;";
+        let tokens = tokenize(input);
+        assert_eq!(tokens.len(), 11);  // var, x, =, 5, ;, x, =, x, +, 1, ;, Eof
+
+        assert_eq!(tokens[0], Token::Var);
+        assert!(matches!(tokens[1], Token::Identifier(_)));
+        assert_eq!(tokens[2], Token::Equal);
+        assert!(matches!(tokens[3], Token::Number(5)));
+        assert_eq!(tokens[4], Token::Semicolon);
+
+        assert!(matches!(tokens[5], Token::Identifier(_)));
+        assert_eq!(tokens[6], Token::Equal);
+        assert!(matches!(tokens[7], Token::Identifier(_)));
+        assert_eq!(tokens[8], Token::Plus);
+        assert!(matches!(tokens[9], Token::Number(1)));
+        assert_eq!(tokens[10], Token::Semicolon);
+    }
+
+
 }

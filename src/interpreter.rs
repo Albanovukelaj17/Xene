@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use crate::lexer::Token;
 use crate::parser::ASTNode;
+use crate::parser::{parse_if, parse_while};
+
 
 pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
     match ast {
@@ -132,4 +134,46 @@ mod tests {
         }
         assert_eq!(*env.get("x").unwrap(), 9);
     }
+
+    #[test]
+    fn test_interpreter_if_else() {
+        let input = "var x = 4; if x > 5 { print(1); } else { print(0); }";
+        let mut tokens = tokenize(input);
+        let mut env = HashMap::new();
+
+        // Parse and execute the assignment
+        if let Some(ast) = parse_assignment(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+
+        // Parse and execute the if-else statement
+        if let Some(ast) = parse_if(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+
+        // In this case, since x = 4, the else branch should be taken, printing 0.
+        assert_eq!(env.get("x"), Some(&4));
+    }
+
+    #[test]
+    fn test_interpreter_while_loop() {
+        let input = "var x = 10; while x > 5 { x = x - 1; }";
+        let mut tokens = tokenize(input);
+        let mut env = HashMap::new();
+
+        // Parse and execute the assignment
+        if let Some(ast) = parse_assignment(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+
+        // Parse and execute the while loop
+        if let Some(ast) = parse_while(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+
+        // After the loop, x should be 5
+        assert_eq!(env.get("x"), Some(&5));
+    }
+
+
 }

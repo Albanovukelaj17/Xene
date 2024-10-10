@@ -1,6 +1,6 @@
 mod lexer;
 mod parser;
-mod interpreter;  // Füge den Interpreter hinzu
+mod interpreter;
 
 use std::collections::HashMap;
 use std::io::{self, Write};
