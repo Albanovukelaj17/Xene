@@ -1,1 +1,17 @@
+# Ignore Rust build artifacts
 /target
+*.rmeta
+*.o
+*.d
+*.rcgu.*
+incremental/
+
+# Cargo specific
+.cargo/
+.cargo-lock
+
+# Ignore build artifacts from different target directories
+/target*
+Cargo.lock
+Cargo.toml
+.idea
