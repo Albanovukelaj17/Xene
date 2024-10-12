@@ -165,26 +165,29 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::If) = tokens.get(0).cloned() {
         tokens.remove(0);  // Entferne `if`
         let condition = parse_expression(tokens)?;  // Parse die Bedingung
-        let then_branch = parse_block(tokens)?;  // Parse den `then`-Block
 
-        println!("Parsed `then` branch");
+        // Überprüfen, ob der nächste Token eine öffnende Klammer `{` ist
+        if let Some(Token::LeftBrace) = tokens.get(0) {
+            tokens.remove(0);  // Entferne `{`
+            let then_branch = parse_block(tokens)?;  // Parse den Block
 
-        let else_branch = if let Some(Token::Else) = tokens.get(0) {
-            tokens.remove(0);  // Entferne `else`
-            Some(Box::new(parse_block(tokens)?))  // Parse den `else`-Block
+            // Optional: Überprüfen, ob es ein `else`-Zweig gibt
+            let else_branch = if let Some(Token::Else) = tokens.get(0) {
+                tokens.remove(0);  // Entferne `else`
+                Some(Box::new(parse_block(tokens)?))  // Parse den `else`-Block
+            } else {
+                None
+            };
+
+            return Some(ASTNode::If {
+                condition: Box::new(condition),
+                then_branch: Box::new(then_branch),
+                else_branch,
+            });
         } else {
-            None
-        };
-
-        println!("Parsed `else` branch");
-
-        // Der gesamte `if-else`-Ausdruck ist jetzt abgeschlossen
-        println!("`if-else`-Ausdruck abgeschlossen.");
-        return Some(ASTNode::If {
-            condition: Box::new(condition),
-            then_branch: Box::new(then_branch),
-            else_branch,
-        });
+            println!("Fehler: `then`-Block beginnt nicht mit `{{`");
+            return None;
+        }
     }
     None
 }
@@ -194,22 +197,24 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::While) = tokens.get(0).cloned() {
         tokens.remove(0);  // Entferne `while`
+        let condition = parse_expression(tokens)?;  // Parse die Bedingung
 
-        // Parse die Bedingung der Schleife
-        let condition = parse_expression(tokens)?;  // Die Bedingung sollte z.B. `x > 5` sein
+        // Überprüfen, ob der nächste Token eine öffnende Klammer `{` ist
+        if let Some(Token::LeftBrace) = tokens.get(0) {
+            tokens.remove(0);  // Entferne `{`
+            let body = parse_block(tokens)?;  // Parsen des Blocks
 
-        // Erwarte die öffnende geschweifte Klammer `{` für den Schleifenbody
-        let body = parse_block(tokens)?;  // Parsen des Schleifenbodys, z.B. `{ print(x); }`
-
-        // Gib den AST-Knoten für die `while`-Schleife zurück
-        return Some(ASTNode::While {
-            condition: Box::new(condition),
-            body: Box::new(body),
-        });
+            return Some(ASTNode::While {
+                condition: Box::new(condition),
+                body: Box::new(body),
+            });
+        } else {
+            println!("Fehler: Schleifenblock beginnt nicht mit `{{`");
+            return None;
+        }
     }
     None
 }
-
 
 pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     // Überprüfen, ob der Block mit `{` beginnt
@@ -220,12 +225,9 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
         // Parsen der Anweisungen innerhalb des Blocks
         while let Some(token) = tokens.get(0) {
-            println!("Current token in parse_block: {:?}", token);  // Debugging-Ausgabe
-
             // Wenn wir auf `}` stoßen, wissen wir, dass der Block endet
             if let Token::RightBrace = token {
                 tokens.remove(0);  // Entferne die `}`
-                println!("End of block detected.");  // Debugging
                 return Some(ASTNode::Block(statements));  // Gib den Block zurück
             }
 
@@ -233,18 +235,17 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             if let Some(statement) = parse_expression(tokens) {
                 statements.push(statement);
             } else {
-                // Fehler: Ungültige Anweisung innerhalb des Blocks
                 println!("Fehler beim Parsen des Blocks.");
                 return None;
             }
         }
 
         // Falls die Schleife endet, ohne ein `}` zu finden, liegt ein Fehler vor
-        println!("Fehler: Kein `brace` gefunden, Block wurde nicht richtig geschlossen.");
+        println!("Fehler: Kein `}}` gefunden, Block wurde nicht richtig geschlossen.");
         return None;
     }
 
-    println!("Fehler: Block beginnt nicht mit `brace`.");
+    println!("Fehler: Block beginnt nicht mit `{{`.");
     None
 }
 
@@ -648,6 +649,46 @@ mod tests {
                 let ast = parse_expression(&mut tokens);
                 assert!(ast.is_some());
             }
+            #[test]
+            fn test_parse_if_else() {
+                let input = "if x > 5 { print(x); } else { print(0); }";
+                let mut tokens = tokenize(input);
+                let ast = parse_if(&mut tokens);
+                assert!(ast.is_some());
+
+                if let Some(ASTNode::If { condition, then_branch, else_branch }) = ast {
+                    // Ensure the condition is correctly parsed
+                    if let ASTNode::BinaryOp { left, operator, right } = *condition {
+                        assert!(matches!(*left, ASTNode::Identifier(_)));
+                        assert_eq!(operator, Token::GreaterThan);  // Dereference operator here
+                        assert!(matches!(*right, ASTNode::Number(_)));
+                    }
+
+                    // Ensure the `then` branch is a block containing a `print` statement
+                    if let ASTNode::Block(statements) = *then_branch {
+                        if let ASTNode::Print(expr) = &statements[0] {
+                            assert!(matches!(**expr, ASTNode::Identifier(_)));
+                        }
+                    }
+
+                    // Ensure the `else` branch is a block containing a `print` statement
+                    if let Some(ASTNode::Block(statements)) = else_branch.as_deref() {
+                        if let ASTNode::Print(expr) = &statements[0] {
+                            assert!(matches!(**expr, ASTNode::Number(_)));
+                        }
+                    }
+                }
+            }
+
+
+            #[test]
+            fn test_parse_while_loop() {
+                let input = "while x > 5 { print(x); x = x - 1; }";
+                let mut tokens = tokenize(input);
+                let ast = parse_while(&mut tokens);
+                assert!(ast.is_some());
+            }
+
             #[test]
             fn test_if_statement_parsing() {
                 let input = "if x > 5 { print(x); } else { print(0); }";

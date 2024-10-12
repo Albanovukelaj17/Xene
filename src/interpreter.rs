@@ -3,34 +3,34 @@ use crate::lexer::Token;
 use crate::parser::ASTNode;
 use crate::parser::{parse_if, parse_while};
 
-
 pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
     match ast {
         // Zuweisung von Variablen (z.B. `x = x - 1`)
         ASTNode::Assignment { var_name, value } => {
-            // Überprüfen, ob die Variable bereits existiert
-            if let Some(&old_val) = env.get(&var_name) {
-                println!("Alter Wert von {}: {}", var_name, old_val);
-
-                // Wert der rechten Seite auswerten (z.B. `x - 1`)
-                let new_val = evaluate_expression(*value, env);
-                println!("Berechne neuen Wert von {}: {}", var_name, new_val);
-
-                // Aktualisiere den Wert in der Umgebung
-                env.insert(var_name.clone(), new_val);
-                println!("Wert von {} nach Zuweisung: {}", var_name, new_val);
-            } else {
-                // Falls die Variable neu ist, weise den Wert zu
-                let val = evaluate_expression(*value, env);
-                println!("Zuweisung (neue Variable): {} = {}", var_name, val);
-                env.insert(var_name.clone(), val);
-            }
+            let new_val = evaluate_expression(*value, env);
+            env.insert(var_name.clone(), new_val);
         }
 
         // Print-Anweisung
         ASTNode::Print(expr) => {
             let val = evaluate_expression(*expr, env);
             println!("print: {}", val);  // Gib den Wert aus
+        }
+
+        // If-Anweisung
+        ASTNode::If { condition, then_branch, else_branch } => {
+            if evaluate_condition(*condition, env) {
+                interpret(*then_branch, env);
+            } else if let Some(else_branch) = else_branch {
+                interpret(*else_branch, env);
+            }
+        }
+
+        // While-Anweisung
+        ASTNode::While { condition, body } => {
+            while evaluate_condition(*condition.clone(), env) {
+                interpret(*body.clone(), env); // Führe den Schleifenbody aus
+            }
         }
 
         // Weitere Anweisungen wie `if`, `while`, etc.
@@ -171,9 +171,10 @@ mod tests {
             interpret(ast, &mut env);
         }
 
-        // After the loop, x should be 5
+        // Nach der Schleife sollte x gleich 5 sein
         assert_eq!(env.get("x"), Some(&5));
     }
+
 
 
 }

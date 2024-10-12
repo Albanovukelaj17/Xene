@@ -135,7 +135,7 @@ mod tests {
     fn test_tokenize_multiple_statements() {
         let input = "var x = 5; x = x + 1;";
         let tokens = tokenize(input);
-        assert_eq!(tokens.len(), 11);  // var, x, =, 5, ;, x, =, x, +, 1, ;, Eof
+        assert_eq!(tokens.len(), 12);  // var, x, =, 5, ;, x, =, x, +, 1, ;, Eof
 
         assert_eq!(tokens[0], Token::Var);
         assert!(matches!(tokens[1], Token::Identifier(_)));
@@ -150,6 +150,4 @@ mod tests {
         assert!(matches!(tokens[9], Token::Number(1)));
         assert_eq!(tokens[10], Token::Semicolon);
     }
-
-
 }
