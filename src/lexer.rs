@@ -46,7 +46,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 println!("Erkannte schließende Klammer `)`");
                 tokens.push(Token::RightParen);
             }
-            '{' => tokens.push(Token::LeftBrace),  // Neu hinzugefügt
+            '{' => {
+                println!("Erkannte öffnende Klammer `{{`");
+                tokens.push(Token::LeftBrace)
+            }  // Neu hinzugefügt
+
             '}' => tokens.push(Token::RightBrace), // Neu hinzugefügt
             '>' => {
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
@@ -150,4 +154,26 @@ mod tests {
         assert!(matches!(tokens[9], Token::Number(1)));
         assert_eq!(tokens[10], Token::Semicolon);
     }
+}
+
+#[test]
+fn test_tokenize_with_braces_and_parens() {
+    let input = "if (x > 5) { print(x); }";
+    let tokens = tokenize(input);
+    assert_eq!(tokens.len(), 14);  // if, (, x, >, 5, ), {, print, (, x, ), ;, }
+
+    assert_eq!(tokens[0], Token::If);                      // if
+    assert_eq!(tokens[1], Token::LeftParen);               // (
+    assert!(matches!(tokens[2], Token::Identifier(_)));     // x
+    assert_eq!(tokens[3], Token::GreaterThan);             // >
+    assert!(matches!(tokens[4], Token::Number(5)));         // 5
+    assert_eq!(tokens[5], Token::RightParen);              // )
+    assert_eq!(tokens[6], Token::LeftBrace);               // {
+    assert_eq!(tokens[7], Token::Print);                   // print
+    assert_eq!(tokens[8], Token::LeftParen);               // (
+    assert!(matches!(tokens[9], Token::Identifier(_)));     // x
+    assert_eq!(tokens[10], Token::RightParen);             // )
+    assert_eq!(tokens[11], Token::Semicolon);               //;
+    assert_eq!(tokens[12], Token::RightBrace);             // }
+    assert!(matches!(tokens[13], Token::Eof));
 }
