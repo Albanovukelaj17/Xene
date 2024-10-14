@@ -41,166 +41,207 @@ use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
             None
         }
 
-        pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-            println!("Current token in parse_expression: {:?}", tokens.get(0));
+pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    println!("Starting parse_expression, current token: {:?}", tokens.get(0));
 
-            // Überprüfen, ob es sich um eine Zuweisung handelt (z.B. `x = x - 1`)
-            if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-                println!("Erkannte Identifier für Zuweisung: {}", var_name);
-                tokens.remove(0);  // Entferne die Variable (z.B. `x`)
+    // Check if it's an assignment expression (e.g., `x = x - 1`)
+    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        println!("Detected Identifier for assignment: {}", var_name);
+        tokens.remove(0);  // Remove the variable (e.g., `x`)
 
-                // Überprüfen, ob ein Gleichheitszeichen folgt (z.B. `=`)
-                if let Some(Token::Equal) = tokens.get(0).cloned() {
-                    println!("Erkannte Gleichheitszeichen `=`");
-                    tokens.remove(0);  // Entferne das Gleichheitszeichen `=`
+        // Check if the next token is an equal sign (`=`)
+        if let Some(Token::Equal) = tokens.get(0).cloned() {
+            println!("Detected equal sign `=` for assignment");
+            tokens.remove(0);  // Remove the equal sign `=`
 
-                    // Versuche, den gesamten Ausdruck auf der rechten Seite zu parsen (z.B. `x - 1`)
-                    if let Some(right_expr) = parse_binary_op(tokens) {
-                        println!("Parsed rechter Ausdruck für Zuweisung: {:?}", right_expr);
-                        // Erstelle einen Zuweisungsknoten
-                        return Some(ASTNode::Assignment {
-                            var_name,
-                            value: Box::new(right_expr),
+            // Try parsing the entire expression on the right-hand side (e.g., `x - 1`)
+            if let Some(right_expr) = parse_binary_op(tokens) {
+                println!("Parsed right-hand side of assignment: {:?}", right_expr);
+                // Create an assignment node
+                return Some(ASTNode::Assignment {
+                    var_name,
+                    value: Box::new(right_expr),
+                });
+            } else {
+                println!("Error: Expected an expression after `=`");
+                return None;
+            }
+        } else {
+            println!("No equal sign found, returning the simple variable: {}", var_name);
+            // If no equal sign, it's just a simple variable expression
+            return Some(ASTNode::Identifier(var_name));
+        }
+    }
+
+    // Handle `print` statements (e.g., `print(x);`)
+    if let Some(Token::Print) = tokens.get(0).cloned() {
+        println!("Detected `print` statement");
+        tokens.remove(0);  // Remove `print`
+
+        // Expect an opening parenthesis `(` after `print`
+        if let Some(Token::LeftParen) = tokens.get(0).cloned() {
+            println!("Detected opening parenthesis `(` after `print`");
+            tokens.remove(0);  // Remove `(`
+
+            // Expect the expression inside the parentheses (e.g., the variable to print)
+            if let Some(expression) = parse_primary_expression(tokens) {
+                println!("Parsed expression inside `print`: {:?}", expression);
+
+                // Expect the closing parenthesis `)`
+                if let Some(Token::RightParen) = tokens.get(0).cloned() {
+                    println!("Detected closing parenthesis `)` after expression");
+                    tokens.remove(0);  // Remove `)`
+
+                    // Now expect a semicolon `;` to end the statement
+                    if let Some(Token::Semicolon) = tokens.get(0).cloned() {
+                        println!("Detected semicolon `;` after `print` statement");
+                        tokens.remove(0);  // Remove `;`
+                        return Some(ASTNode::Print(Box::new(expression)));  // Return the `print` statement
+                    } else {
+                        println!("Error: Missing semicolon after `print` statement");
+                        return None;
+                    }
+                } else {
+                    println!("Error: Missing closing parenthesis `)` after expression");
+                    return None;
+                }
+            } else {
+                println!("Error: Invalid expression inside `print`");
+                return None;
+            }
+        } else {
+            println!("Error: Missing opening parenthesis `(` after `print`");
+            return None;
+        }
+    }
+
+    // If it's not a `print` statement, try parsing other expressions (e.g., binary expressions)
+    if let Some(left) = parse_primary_expression(tokens) {
+        println!("Parsed left-hand side expression: {:?}", left);
+
+        // Check if there's an operator following the left-hand side (e.g., `+`, `-`, etc.)
+        if let Some(operator) = tokens.get(0).cloned() {
+            println!("Detected operator: {:?}", operator);
+            tokens.remove(0);  // Remove the operator
+
+            // Match supported operators and parse the right-hand side expression
+            match operator {
+                Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual | Token::Minus | Token::Plus => {
+                    if let Some(right) = parse_primary_expression(tokens) {
+                        println!("Parsed right-hand side expression after operator: {:?}", right);
+                        return Some(ASTNode::BinaryOp {
+                            left: Box::new(left),
+                            operator,
+                            right: Box::new(right),
                         });
                     } else {
-                        println!("Fehler: Erwarte rechten Ausdruck nach `=`");
+                        println!("Error: Expected right-hand side expression after operator");
                         return None;
                     }
-                } else {
-                    println!("Kein Gleichheitszeichen gefunden, Rückgabe der einfachen Variable: {}", var_name);
-                    // Falls kein Gleichheitszeichen vorhanden ist, handelt es sich möglicherweise um eine einfache Variable
-                    return Some(ASTNode::Identifier(var_name));
+                }
+                _ => {
+                    println!("Operator not recognized, returning the left-hand side as is");
+                    return Some(left);
                 }
             }
-
-            // Handhabung für `print`
-            if let Some(Token::Print) = tokens.get(0) {
-                tokens.remove(0);  // Entferne `print`
-
-                // Erwarte die öffnende Klammer `(`
-                if let Some(Token::LeftParen) = tokens.get(0) {
-                    tokens.remove(0);  // Entferne `(`
-
-                    // Erwarte den Ausdruck innerhalb der Klammern (z.B. eine Variable)
-                    if let Some(expression) = parse_primary_expression(tokens) {
-                        // Erwarte die schließende Klammer `)`
-                        if let Some(Token::RightParen) = tokens.get(0) {
-                            tokens.remove(0);  // Entferne `)`
-
-                            // Jetzt sollte ein Semikolon `;` folgen
-                            if let Some(Token::Semicolon) = tokens.get(0) {
-                                tokens.remove(0);  // Entferne das Semikolon
-                                return Some(ASTNode::Print(Box::new(expression)));  // Gib die `print`-Anweisung zurück
-                            } else {
-                                println!("Fehler: Fehlendes Semikolon nach `print`");
-                                return None;
-                            }
-                        } else {
-                            println!("Fehler: Fehlende schließende Klammer `)` nach Ausdruck");
-                            return None;
-                        }
-                    } else {
-                        println!("Fehler: Ungültiger Ausdruck in `print`");
-                        return None;
-                    }
-                } else {
-                    println!("Fehler: Fehlende öffnende Klammer `(` nach `print`");
-                    return None;
-                }
-            }
-
-            // Falls es keine `print`-Anweisung ist, versuche eine andere Expression
-            if let Some(left) = parse_primary_expression(tokens) {
-                println!("Parsed linker Ausdruck: {:?}", left);
-                if let Some(operator) = tokens.get(0).cloned() {
-                    println!("Erkannter Operator: {:?}", operator);
-                    tokens.remove(0);  // Entferne den Operator
-                    match operator {
-                        Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual | Token::Minus | Token::Plus => {
-                            if let Some(right) = parse_primary_expression(tokens) {
-                                println!("Parsed rechter Ausdruck nach Operator: {:?}", right);
-                                return Some(ASTNode::BinaryOp {
-                                    left: Box::new(left),
-                                    operator,
-                                    right: Box::new(right),
-                                });
-                            } else {
-                                println!("Fehler: Erwarte rechten Ausdruck nach Operator");
-                                return None;
-                            }
-                        }
-                        _ => {
-                            return Some(left);
-                        }
-                    }
-                }
-            }
-
-            None
+        } else {
+            println!("No operator found, returning left-hand side expression as is");
+            return Some(left);
         }
+    }
 
-        pub fn parse_primary_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-            println!("Current token in parse_primary_expression: {:?}", tokens.get(0));
+    println!("No valid expression found, returning `None`");
+    None
+}
 
-            // Prüfe auf Zahlen oder Variablen als primäre Ausdrücke
-            if let Some(Token::Number(value)) = tokens.get(0).cloned() {
-                println!("Erkannte Zahl: {}", value);
-                tokens.remove(0);
-                return Some(ASTNode::Number(value));
-            }
+pub fn parse_primary_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    println!("Current token in parse_primary_expression: {:?}", tokens.get(0));
 
-            if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-                println!("Erkannte Variable: {}", var_name);
-                tokens.remove(0);
-                return Some(ASTNode::Identifier(var_name));
-            }
+    // Check for numbers or variables as primary expressions
+    if let Some(Token::Number(value)) = tokens.get(0).cloned() {
+        println!("Recognized number: {}", value);
+        tokens.remove(0);
+        return Some(ASTNode::Number(value));
+    }
 
-            println!("Fehler: Kein gültiger primärer Ausdruck gefunden");
-            None
+    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        println!("Recognized variable: {}", var_name);
+        tokens.remove(0);
+        return Some(ASTNode::Identifier(var_name));
+    }
+
+    // Handle parenthesized expressions
+    if let Some(Token::LeftParen) = tokens.get(0).cloned() {
+        println!("Recognized opening paren `(`");
+        tokens.remove(0);  // Remove the `(`
+
+        // Recursively parse the expression inside parentheses
+        let expr = parse_expression(tokens)?;
+        println!("Parsed expression inside parens: {:?}", expr);
+
+        if let Some(Token::RightParen) = tokens.get(0).cloned() {
+            println!("Recognized closing paren `)`");
+            tokens.remove(0);  // Remove the `)`
+            return Some(expr);
+        } else {
+            println!("Error: Expected closing paren `)`");
+            return None;
         }
+    }
 
-        pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-            if let Some(Token::If) = tokens.get(0).cloned() {
-                tokens.remove(0);  // Entferne `if`
+    println!("Error: No valid primary expression found");
+    None
+}
 
-                // Hier wird eventuell nach einer öffnenden Klammer gesucht, obwohl sie nicht da ist
-                if let Some(Token::LeftParen) = tokens.get(0) {
-                    tokens.remove(0);  // Entferne `(`
-                }
+pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    if let Some(Token::If) = tokens.get(0).cloned() {
+        println!("Found `if` keyword");
+        tokens.remove(0);  // Remove `if`
 
-                let condition = parse_expression(tokens)?;  // Parse die Bedingung
+        let condition = parse_expression(tokens)?;  // Parse the condition inside parentheses
+        println!("Parsed condition: {:?}", condition);
 
-                if let Some(Token::RightParen) = tokens.get(0) {
-                    tokens.remove(0);  // Entferne `)`
-                }
+        // Expecting an opening brace `{` for the `then` block
+        if let Some(Token::LeftBrace) = tokens.get(0) {
+            println!("Found opening brace `{{` for `then` block");
+            tokens.remove(0);  // Remove `{`
 
-                // Parse den Block nach dem If
+            // Parse the `then` block
+            let then_branch = parse_block(tokens)?;
+            println!("Parsed `then` block: {:?}", then_branch);
+
+            // Optionally parse the `else` block if present
+            let else_branch = if let Some(Token::Else) = tokens.get(0) {
+                println!("Found `else` keyword");
+                tokens.remove(0);  // Remove `else`
+
                 if let Some(Token::LeftBrace) = tokens.get(0) {
-                    tokens.remove(0);  // Entferne `{`
-                    let then_branch = parse_block(tokens)?;  // Parse den Block
-
-                    // Optional: Überprüfen, ob es einen `else`-Zweig gibt
-                    let else_branch = if let Some(Token::Else) = tokens.get(0) {
-                        tokens.remove(0);  // Entferne `else`
-                        Some(Box::new(parse_block(tokens)?))  // Parse den `else`-Block
-                    } else {
-                        None
-                    };
-
-                    return Some(ASTNode::If {
-                        condition: Box::new(condition),
-                        then_branch: Box::new(then_branch),
-                        else_branch,
-                    });
+                    println!("Found opening brace `{{` for `else` block");
+                    tokens.remove(0);  // Remove `{`
+                    Some(Box::new(parse_block(tokens)?))  // Parse the `else` block
                 } else {
-                    println!("Fehler: `then`-Block beginnt nicht mit `{{`");
+                    println!("Error: `else` block must start with `{{`");
                     return None;
                 }
-            }
-            None
-        }
+            } else {
+                println!("No `else` block found");
+                None
+            };
 
-        //      if x > 5 { print(x); } else { print(0); }
+            return Some(ASTNode::If {
+                condition: Box::new(condition),
+                then_branch: Box::new(then_branch),
+                else_branch,
+            });
+        } else {
+            println!("Error: `then` block must start with `{{`");
+            return None;
+        }
+    }
+    None
+}
+
+//      if x > 5 { print(x); } else { print(0); }
         //      while x > 5 { print(x); }
         pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             if let Some(Token::While) = tokens.get(0).cloned() {
@@ -221,68 +262,69 @@ use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
             None
         }
 
-        pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-            // Überprüfen, ob der Block mit `{` beginnt
-            if let Some(Token::LeftBrace) = tokens.get(0) {
-                tokens.remove(0);  // Entferne die `{`
+pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    println!("Parsing block, current token: {:?}", tokens.get(0));
 
-                let mut statements = Vec::new();
+    if let Some(Token::LeftBrace) = tokens.get(0) {
+        tokens.remove(0);  // Remove the `{`
+        let mut statements = Vec::new();
 
-                // Parsen der Anweisungen innerhalb des Blocks
-                while let Some(token) = tokens.get(0) {
-                    println!("Current token in parse_block: {:?}", token);  // Debugging-Ausgabe
+        while let Some(token) = tokens.get(0) {
+            println!("Current token in block: {:?}", token);
 
-                    // Wenn wir auf `}` stoßen, wissen wir, dass der Block endet
-                    if let Token::RightBrace = token {
-                        tokens.remove(0);  // Entferne die `}`
-                        println!("End of block detected.");  // Debugging
-                        return Some(ASTNode::Block(statements));  // Gib den Block zurück
-                    }
+            // Check if we've reached the closing brace `}`
+            if let Token::RightBrace = token {
+                tokens.remove(0);  // Remove the `}`
+                println!("Found closing brace `}}`");
+                return Some(ASTNode::Block(statements));  // Return the parsed block
+            }
 
-                    // Versuche, den nächsten Ausdruck oder die nächste Anweisung zu parsen
-                    if let Some(statement) = parse_expression(tokens) {
-                        statements.push(statement);
-                    } else {
-                        // Fehler: Ungültige Anweisung innerhalb des Blocks
-                        println!("Fehler beim Parsen des Blocks.");
-                        return None;
-                    }
-                }
-
-                // Falls die Schleife endet, ohne ein `}` zu finden, liegt ein Fehler vor
-                println!("Fehler: Kein `brace` gefunden, Block wurde nicht richtig geschlossen.");
+            // Parse the next expression or statement within the block
+            if let Some(statement) = parse_expression(tokens) {
+                statements.push(statement);
+            } else {
+                println!("Error parsing statement in block.");
                 return None;
             }
-
-            println!("Fehler: Block beginnt nicht mit `brace`.");
-            None
         }
 
-        pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-            if let Some(left) = parse_primary_expression(tokens) {
-                if let Some(operator) = tokens.get(0).cloned() {
-                    tokens.remove(0);  // Entferne den Operator
+        println!("Error: Block was not properly closed with `}}`.");
+        return None;
+    }
 
-                    // Parsen des rechten Ausdrucks
-                    if let Some(right) = parse_primary_expression(tokens) {
-                        return Some(ASTNode::BinaryOp {
-                            left: Box::new(left),
-                            operator,
-                            right: Box::new(right),
-                        });
-                    } else {
-                        println!("Fehler: Erwarte rechten Ausdruck nach Operator");
-                        return None;
-                    }
-                } else {
-                    return Some(left);  // Falls kein Operator folgt, gib einfach den linken Ausdruck zurück
-                }
+    println!("Error: Block must start with `{{`.");
+    None
+}
+
+pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    let left = parse_primary_expression(tokens)?;
+    println!("Parsed left-hand side: {:?}", left);
+
+    if let Some(operator) = tokens.get(0).cloned() {
+        match operator {
+            Token::Plus | Token::Minus | Token::Multiply | Token::Divide | Token::GreaterThan | Token::LessThan => {
+                println!("Found binary operator: {:?}", operator);
+                tokens.remove(0);  // Remove the operator
+
+                let right = parse_primary_expression(tokens)?;
+                println!("Parsed right-hand side: {:?}", right);
+
+                return Some(ASTNode::BinaryOp {
+                    left: Box::new(left),
+                    operator,
+                    right: Box::new(right),
+                });
             }
-
-            None
+            _ => {
+                println!("No valid operator found, returning left-hand side");
+                return Some(left);
+            }
         }
+    }
+    None
+}
 
-        mod tests {
+mod tests {
             use super::*;
             use crate::lexer::tokenize;
 
