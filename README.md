@@ -1,65 +1,66 @@
-Xene Programming Language
+## **Xene Programming Language**
 
 Xene is a programming language project written in Rust. The goal of this project is to build a simple interpreter and parser from scratch, focusing on basic language constructs such as variables, expressions, control flow (if, else, while), and print statements.
 
-Table of Contents
+## **Table of Contents**
 
-Installation
-Usage
-Features
-Examples
-Testing
-Contributing
-License
-Installation
+-Installation <br></br>
+-Usage<br></br>
+-Features<br></br>
+-Examples<br></br>
+-Testing<br></br>
+-Contributing<br></br>
+-License<br></br>
+-Installation<br></br>
 
-Prerequisites
+## **Prerequisites**
 To work with this project, you'll need the following tools installed:
 
 Rust: Make sure you have Rust installed on your system.
 You can install Rust via rustup:
 
-bash
-Copy code
+```bash
+
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
 Cargo: Cargo is Rust's package manager and build system. It comes with Rust, so if you installed Rust, you already have Cargo.
-Cloning the Repository
+**Cloning the Repository** <br></br>
 Clone this repository to your local machine:
 
-bash
-Copy code
+```bash
 git clone https://github.com/Albanovukelaj17/Xene.git
 cd Xene
-Building the Project
+```
+**Building the Project**
 To build the project, simply run the following command inside the project directory:
 
-bash
-Copy code
+```bash
 cargo build
+```
 This will compile the source code and produce the executable files in the target directory.
 
 Running the Project
 You can run the project using:
 
-bash
-Copy code
+```bash
 cargo run
-Usage
+```
+## **Usage**
 
 Once the project is built, you can start writing programs using the syntax supported by Xene.
 
-Basic Syntax
+**Basic Syntax**
 Xene supports the following constructs:
 
-Variable Declarations: You can declare variables using the var keyword.
+-Variable Declarations: You can declare variables using the var keyword. 
 txt
 Copy code
-var x = 10;
-Expressions: You can assign and manipulate variables using standard arithmetic operations.
+var x = 10;<br></br>
+-Expressions: You can assign and manipulate variables using standard arithmetic operations.
 txt
 Copy code
-x = x - 1;
-Control Flow:
+x = x - 1; <br></br>
+-Control Flow:
 If-Else statements:
 txt
 Copy code
@@ -67,18 +68,18 @@ if x > 5 {
     print(x);
 } else {
     print(0);
-}
-While Loops:
+}<br></br>
+-While Loops:
 txt
 Copy code
 while x > 5 {
     x = x - 1;
-}
-Print Statements: Output expressions using the print() function.
+}<br></br>
+-Print Statements: Output expressions using the print() function.
 txt
 Copy code
-print(x);
-Running Example Programs
+print(x);<br></br>
+-Running Example Programs
 You can write Xene programs in text files and run them by using the Xene interpreter.
 
 Features
