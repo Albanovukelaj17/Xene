@@ -5,19 +5,17 @@ use crate::parser::{parse_if, parse_while};
 
 pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
     match ast {
-        // Zuweisung von Variablen (z.B. `x = x - 1`)
         ASTNode::Assignment { var_name, value } => {
             let new_val = evaluate_expression(*value, env);
-            env.insert(var_name.clone(), new_val);
+            println!("Assigning {} to {}", new_val, var_name);
+            env.insert(var_name.clone(), new_val);  // Update the value of the variable in the environment
         }
 
-        // Print-Anweisung
         ASTNode::Print(expr) => {
             let val = evaluate_expression(*expr, env);
-            println!("print: {}", val);  // Gib den Wert aus
+            println!("print: {}", val);  // Print the evaluated value
         }
 
-        // If-Anweisung
         ASTNode::If { condition, then_branch, else_branch } => {
             if evaluate_condition(*condition, env) {
                 interpret(*then_branch, env);
@@ -26,40 +24,54 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
             }
         }
 
-        // While-Anweisung
         ASTNode::While { condition, body } => {
-            while evaluate_condition(*condition.clone(), env) {
-                interpret(*body.clone(), env); // Führe den Schleifenbody aus
-            }
-        }
 
-        // Weitere Anweisungen wie `if`, `while`, etc.
-        _ => {}
+                if evaluate_condition(*condition.clone(), env) {
+                    // Debugging the condition and value of `x`
+                    println!("While loop condition is true. Current env: {:?}", env);
+
+                    // Interpret the body of the loop
+                    interpret(*body.clone(), env);
+
+                    // Print the updated environment after each iteration
+                    println!("Updated env after loop body: {:?}", env);
+
+                    // Re-evaluate the condition and check if it should break the loop
+                    //
+                }
+
+                if !evaluate_condition(*condition.clone(), env) {
+                    println!("Exiting loop, condition is now false.");
+
+            }
     }
+
+    _ => {}
+}
 }
 
 // Hilfsfunktion zur Auswertung von Ausdrücken
 pub fn evaluate_expression(expr: ASTNode, env: &mut HashMap<String, i64>) -> i64 {
     match expr {
-        // Wenn der Ausdruck eine Zahl ist, gib diese zurück
+        // Number
         ASTNode::Number(val) => val,
 
-        // Wenn der Ausdruck eine Variable ist, hole ihren Wert aus der Umgebung
+        // Identifier (variable)
         ASTNode::Identifier(var_name) => {
             if let Some(&val) = env.get(&var_name) {
-                println!("Wert von {}: {}", var_name, val);  // Debugging-Ausgabe
+                println!("Wert von {}: {}", var_name, val);  // Debugging output for variable
                 val
             } else {
                 panic!("Unbekannte Variable: {}", var_name);
             }
         }
 
-        // Wenn der Ausdruck eine binäre Operation ist, führe die Operation aus
+        // Binary operation (e.g., `x - 1`)
         ASTNode::BinaryOp { left, operator, right } => {
-            let left_val = evaluate_expression(*left, env);  // Linken Ausdruck auswerten
-            let right_val = evaluate_expression(*right, env);  // Rechten Ausdruck auswerten
+            let left_val = evaluate_expression(*left, env);  // Evaluate left operand
+            let right_val = evaluate_expression(*right, env);  // Evaluate right operand
 
-            println!("Berechne: {} {:?} {}", left_val, operator, right_val);  // Debugging-Ausgabe
+            println!("Berechne: {} {:?} {}", left_val, operator, right_val);  // Debugging
 
             match operator {
                 Token::Plus => left_val + right_val,
@@ -80,7 +92,7 @@ pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) ->
         ASTNode::Number(val) => val != 0,
         ASTNode::Identifier(var_name) => {
             if let Some(&val) = env.get(&var_name) {
-                println!("Bedingung für {}: {}", var_name, val != 0);  // Debugging
+                println!("Condition for {}: {}", var_name, val > 0);
                 val != 0
             } else {
                 false
@@ -89,6 +101,8 @@ pub fn evaluate_condition(condition: ASTNode, env: &mut HashMap<String, i64>) ->
         ASTNode::BinaryOp { left, operator, right } => {
             let left_val = evaluate_expression(*left, env);
             let right_val = evaluate_expression(*right, env);
+            println!("Evaluating condition: {} {:?} {}", left_val, operator, right_val);  // Debugging
+
 
             match operator {
                 Token::GreaterThan => left_val > right_val,
@@ -155,26 +169,39 @@ mod tests {
         assert_eq!(env.get("x"), Some(&4));
     }
 
+
     #[test]
     fn test_interpreter_while_loop() {
         let input = "var x = 10; while x > 5 { x = x - 1; }";
         let mut tokens = tokenize(input);
+
+        println!("Tokens before assignment parsing: {:?}", tokens);  // Check the token stream before parsing
+
         let mut env = HashMap::new();
 
         // Parse and execute the assignment
         if let Some(ast) = parse_assignment(&mut tokens) {
+            println!("Interpreting assignment: {:?}", ast);
             interpret(ast, &mut env);
+        } else {
+            println!("Failed to parse assignment.");  // Debug if assignment parsing fails
         }
+
+        println!("Tokens after assignment interpretation: {:?}", tokens);  // Check remaining tokens after assignment
 
         // Parse and execute the while loop
         if let Some(ast) = parse_while(&mut tokens) {
+            println!("Interpreting while loop: {:?}", ast);
             interpret(ast, &mut env);
+        } else {
+            println!("Failed to parse the while loop.");  // Debug if while loop parsing fails
         }
 
-        // Nach der Schleife sollte x gleich 5 sein
+        // Print the final value of x in the environment for debugging
+        println!("Final value of x in env: {:?}", env.get("x"));
+
+        // After the loop, `x` should be 5
         assert_eq!(env.get("x"), Some(&5));
     }
-
-
 
 }

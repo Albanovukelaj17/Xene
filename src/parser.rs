@@ -21,25 +21,43 @@ use crate::lexer::Token;  // Importiere die Tokens aus dem Lexer
             Print(Box<ASTNode>),  // Füge dies hinzu, um die `print`-Anweisung zu unterstützen
         }
 
-        pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-            if let Some(Token::Var) = tokens.get(0).cloned() {
-                tokens.remove(0);  // Entferne `var`
-                if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-                    tokens.remove(0);  // Entferne den Variablennamen
-                    if let Some(Token::Equal) = tokens.get(0).cloned() {
-                        tokens.remove(0);  // Entferne das Gleichheitszeichen `=`
-                        if let Some(Token::Number(value)) = tokens.get(0).cloned() {
-                            tokens.remove(0);  // Entferne die Zahl
-                            return Some(ASTNode::Assignment {
-                                var_name: var_name.clone(),
-                                value: Box::new(ASTNode::Number(value)),
-                            });
-                        }
+pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    println!("Starting to parse assignment, current token: {:?}", tokens.get(0));
+
+    if let Some(Token::Var) = tokens.get(0).cloned() {
+        tokens.remove(0);  // Entferne `var`
+
+        if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+            tokens.remove(0);  // Entferne den Variablennamen
+
+            if let Some(Token::Equal) = tokens.get(0).cloned() {
+                tokens.remove(0);  // Entferne das Gleichheitszeichen `=`
+
+                if let Some(Token::Number(value)) = tokens.get(0).cloned() {
+                    tokens.remove(0);  // Entferne die Zahl
+
+                    // Now check and remove the semicolon after the assignment
+                    if let Some(Token::Semicolon) = tokens.get(0).cloned() {
+                        tokens.remove(0);  // Entferne das Semikolon `;`
+                        println!("Semicolon removed after assignment.");
+                    } else {
+                        println!("Error: Expected semicolon after assignment.");
+                        return None;
                     }
+
+                    // Return the assignment AST node
+                    return Some(ASTNode::Assignment {
+                        var_name: var_name.clone(),
+                        value: Box::new(ASTNode::Number(value)),
+                    });
                 }
             }
-            None
         }
+    }
+
+    println!("Failed to parse assignment.");
+    None
+}
 
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Starting parse_expression, current token: {:?}", tokens.get(0));
@@ -224,7 +242,7 @@ pub fn parse_primary_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
 pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode>  {
     if let Some(Token::If) = tokens.get(0).cloned() {
-        println!("Found `if` keyword");
+        println!("_____Found `if` keyword");
         tokens.remove(0);  // Remove `if`
 
         let condition = parse_expression(tokens)?;  // Parse the condition inside parentheses
@@ -234,24 +252,24 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode>  {
 
         // Now expecting a `{` for the `then` block
         let next_token = tokens.get(0);  // Look at the next token without removing it
-        println!("Next token after condition: {:?}", next_token);
+        println!("_____Next token after condition: {:?}", next_token);
 
         if let Some(Token::LeftBrace) = next_token {
-            println!("Found opening brace `{{` for `then` block");
-            tokens.remove(0);  // Remove `{`
+            println!("_____Found opening brace `{{` for `then` block");
+           // tokens.remove(0);  // Remove `{`
 
             // Parse the `then` block
+            println!("Tokens: {:?}", tokens);
             let then_branch = parse_block(tokens)?;
-            println!("Parsed `then` block: {:?}", then_branch);
+            println!("_____Parsed `then` block: {:?}", then_branch);
 
             // Optionally parse the `else` block if present
             let else_branch = if let Some(Token::Else) = tokens.get(0) {
-                println!("Found `else` keyword");
+                println!("_____Found `else` keyword");
                 tokens.remove(0);  // Remove `else`
 
                 if let Some(Token::LeftBrace) = tokens.get(0) {
-                    println!("Found opening brace `{{` for `else` block");
-                    tokens.remove(0);  // Remove `{`
+                    println!("_____Found opening brace `{{` for `else` block");
                     Some(Box::new(parse_block(tokens)?))  // Parse the `else` block
                 } else {
                     println!("Error: `else` block must start with `{{`");
@@ -279,14 +297,15 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode>  {
         //      while x > 5 { print(x); }
 pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             if let Some(Token::While) = tokens.get(0).cloned() {
+                println!("_____Found `while` keyword");
                 tokens.remove(0);  // Entferne `while`
 
                 // Parse die Bedingung der Schleife
                 let condition = parse_expression(tokens)?;  // Die Bedingung sollte z.B. `x > 5` sein
-
+                println!("_____Parsed condition: {:?}", condition);
                 // Erwarte die öffnende geschweifte Klammer `{` für den Schleifenbody
                 let body = parse_block(tokens)?;  // Parsen des Schleifenbodys, z.B. `{ print(x); }`
-
+                println!("_____Parsed body: {:?}", body);
                 // Gib den AST-Knoten für die `while`-Schleife zurück
                 return Some(ASTNode::While {
                     condition: Box::new(condition),
@@ -316,6 +335,13 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             // Parse the next expression or statement within the block
             if let Some(statement) = parse_expression(tokens) {
                 statements.push(statement);
+
+                // After successfully parsing a statement, expect a semicolon
+                if let Some(Token::Semicolon) = tokens.get(0) {
+                    println!("Found semicolon after statement, removing it.");
+                    tokens.remove(0);  // Remove the semicolon `;`
+
+                }
             } else {
                 println!("Error parsing statement in block.");
                 return None;
@@ -419,7 +445,7 @@ mod tests {
 
     #[test]
     fn test_simple_if_parsing() {
-        let input = "if (x > 5) { print(x); }";
+        let input = "if x > 5 { print(x); }";
         let mut tokens = tokenize(input);
         let ast = parse_if(&mut tokens);
 
