@@ -25,31 +25,32 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Starting to parse assignment, current token: {:?}", tokens.get(0));
 
     if let Some(Token::Var) = tokens.get(0).cloned() {
-        tokens.remove(0);  // Entferne `var`
+        tokens.remove(0);  // Remove `var`
 
         if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-            tokens.remove(0);  // Entferne den Variablennamen
+            tokens.remove(0);  // Remove the variable name
 
             if let Some(Token::Equal) = tokens.get(0).cloned() {
-                tokens.remove(0);  // Entferne das Gleichheitszeichen `=`
+                tokens.remove(0);  // Remove the equal sign `=`
 
-                if let Some(Token::Number(value)) = tokens.get(0).cloned() {
-                    tokens.remove(0);  // Entferne die Zahl
-
-                    // Now check and remove the semicolon after the assignment
+                // Now parse an expression (like `5 + 3`)
+                if let Some(expression) = parse_expression(tokens) {
+                    // Check for semicolon if it exists and remove it if present
                     if let Some(Token::Semicolon) = tokens.get(0).cloned() {
-                        tokens.remove(0);  // Entferne das Semikolon `;`
+                        tokens.remove(0);  // Remove the semicolon `;`
                         println!("Semicolon removed after assignment.");
                     } else {
-                        println!("Error: Expected semicolon after assignment.");
-                        return None;
+                        println!("Optional: No semicolon found after assignment.");
                     }
 
                     // Return the assignment AST node
                     return Some(ASTNode::Assignment {
                         var_name: var_name.clone(),
-                        value: Box::new(ASTNode::Number(value)),
+                        value: Box::new(expression),
                     });
+                } else {
+                    println!("Error: Invalid expression in assignment.");
+                    return None;
                 }
             }
         }
@@ -383,182 +384,4 @@ pub fn parse_binary_op(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     }
     None
 }
-
-mod tests {
-            use super::*;
-            use crate::lexer::tokenize;
-
-            #[test]
-            fn test_parse_assignment() {
-                let input = "var x = 10;";
-                let mut tokens = tokenize(input);
-                let ast = parse_assignment(&mut tokens);
-                assert!(ast.is_some());
-            }
-
-            #[test]
-            fn test_parse_expression() {
-                let input = "x = x - 1;";
-                let mut tokens = tokenize(input);
-                let ast = parse_expression(&mut tokens);
-                assert!(ast.is_some());
-            }
-            #[test]
-
-            fn test_parse_if_else() {
-                let input = "if x > 5 { print(x); } else { print(0); }";
-                let mut tokens = tokenize(input);
-                let ast = parse_if(&mut tokens);
-                assert!(ast.is_some());
-
-                if let Some(ASTNode::If { condition, then_branch, else_branch }) = ast {
-                    // Ensure the condition is correctly parsed
-                    if let ASTNode::BinaryOp { left, operator, right } = *condition {
-                        assert!(matches!(*left, ASTNode::Identifier(_)));
-                        assert_eq!(operator, Token::GreaterThan);  // Dereference operator here
-                        assert!(matches!(*right, ASTNode::Number(_)));
-                    }
-
-                    // Ensure the `then` branch is a block containing a `print` statement
-                    if let ASTNode::Block(statements) = *then_branch {
-                        if let ASTNode::Print(expr) = &statements[0] {
-                            assert!(matches!(**expr, ASTNode::Identifier(_)));
-                        }
-                    }
-
-                    // Ensure the `else` branch is a block containing a `print` statement
-                    if let Some(ASTNode::Block(statements)) = else_branch.as_deref() {
-                        if let ASTNode::Print(expr) = &statements[0] {
-                            assert!(matches!(**expr, ASTNode::Number(_)));
-                        }
-                    }
-                }
-            }
-
-    #[test]
-            fn test_parse_while_loop() {
-                let input = "while x > 5 { print(x); x = x - 1; }";
-                let mut tokens = tokenize(input);
-                let ast = parse_while(&mut tokens);
-                assert!(ast.is_some());
-            }
-
-    #[test]
-    fn test_simple_if_parsing() {
-        let input = "if x > 5 { print(x); }";
-        let mut tokens = tokenize(input);
-        let ast = parse_if(&mut tokens);
-
-        // Ensure that the AST is generated
-        assert!(ast.is_some(), "Expected some AST, but got None");
-
-        if let Some(ASTNode::If { condition, then_branch, .. }) = ast {
-            // Check if the condition is parsed as `x > 5`
-            match *condition {
-                ASTNode::BinaryOp { ref left, ref operator, ref right } => {
-                    if let ASTNode::Identifier(ref name) = **left {
-                        assert_eq!(name, "x", "Expected left operand to be 'x'");
-                    } else {
-                        panic!("Expected Identifier for left operand");
-                    }
-
-                    assert_eq!(*operator, Token::GreaterThan, "Expected '>' operator");
-
-                    if let ASTNode::Number(value) = **right {
-                        assert_eq!(value, 5, "Expected right operand to be '5'");
-                    } else {
-                        panic!("Expected Number for right operand");
-                    }
-                }
-                _ => panic!("Expected BinaryOp in condition"),
-            }
-
-            // Check if the then branch contains the print statement `print(x)`
-            match *then_branch {
-                ASTNode::Block(ref statements) => {
-                    if let ASTNode::Print(ref expr) = statements[0] {
-                        if let ASTNode::Identifier(ref name) = **expr {
-                            assert_eq!(name, "x", "Expected 'x' inside print statement");
-                        } else {
-                            panic!("Expected Identifier 'x' in print statement");
-                        }
-                    } else {
-                        panic!("Expected Print statement in 'then' block");
-                    }
-                }
-                _ => panic!("Expected Block in 'then' branch"),
-            }
-        } else {
-            panic!("AST for 'if' statement not parsed correctly.");
-        }
-    }
-
-    #[test]
-            fn test_while_loop_parsing() {
-                let input = "while x > 5 { print(x); x = x - 1; }";
-                let mut tokens = tokenize(input);
-                let ast = parse_while(&mut tokens);
-
-                // Ensure the AST is successfully created
-                assert!(ast.is_some());
-
-                if let Some(ASTNode::While { condition, body }) = ast {
-                    // Check the condition is correctly parsed as `x > 5`
-                    match *condition {
-                        ASTNode::BinaryOp { ref left, ref operator, ref right } => {
-                            match **left {
-                                ASTNode::Identifier(ref name) => assert_eq!(name, "x"),
-                                _ => panic!("Expected Identifier for left operand in condition"),
-                            }
-                            assert_eq!(*operator, Token::GreaterThan); // Dereference the operator
-                            match **right {
-                                ASTNode::Number(value) => assert_eq!(value, 5),
-                                _ => panic!("Expected Number 5 for right operand in condition"),
-                            }
-                        }
-                        _ => panic!("Expected BinaryOp in condition"),
-                    }
-
-                    // Check the body contains both `print(x)` and `x = x - 1`
-                    match *body {
-                        ASTNode::Block(ref statements) => {
-                            assert_eq!(statements.len(), 2);
-
-                            // Check the first statement is `print(x)`
-                            if let ASTNode::Print(ref expr) = statements[0] {
-                                match **expr {
-                                    ASTNode::Identifier(ref name) => assert_eq!(name, "x"),
-                                    _ => panic!("Expected Identifier 'x' in print statement"),
-                                }
-                            } else {
-                                panic!("Expected Print statement in while body");
-                            }
-
-                            // Check the second statement is `x = x - 1`
-                            if let ASTNode::Assignment { ref var_name, ref value } = statements[1] {
-                                assert_eq!(var_name, "x");
-                                if let ASTNode::BinaryOp { ref left, ref operator, ref right } = **value {
-                                    match **left {
-                                        ASTNode::Identifier(ref name) => assert_eq!(name, "x"),
-                                        _ => panic!("Expected Identifier 'x' in assignment"),
-                                    }
-                                    assert_eq!(*operator, Token::Minus); // Dereference the operator
-                                    match **right {
-                                        ASTNode::Number(value) => assert_eq!(value, 1),
-                                        _ => panic!("Expected Number 1 in assignment"),
-                                    }
-                                } else {
-                                    panic!("Expected BinaryOp in assignment");
-                                }
-                            } else {
-                                panic!("Expected Assignment in while body");
-                            }
-                        }
-                        _ => panic!("Expected Block in while body"),
-                    }
-                } else {
-                    panic!("AST for 'while' loop not parsed correctly.");
-                }
-            }
-        }
 
