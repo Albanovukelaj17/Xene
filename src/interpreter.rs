@@ -5,17 +5,20 @@ use crate::parser::{parse_if, parse_while};
 
 pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
     match ast {
+        // Variable assignment (e.g., `x = x - 1`)
         ASTNode::Assignment { var_name, value } => {
             let new_val = evaluate_expression(*value, env);
             println!("Assigning {} to {}", new_val, var_name);
-            env.insert(var_name.clone(), new_val);  // Update the value of the variable in the environment
+            env.insert(var_name.clone(), new_val);  // Update the variable in the environment
         }
 
+        // Print statement
         ASTNode::Print(expr) => {
             let val = evaluate_expression(*expr, env);
             println!("print: {}", val);  // Print the evaluated value
         }
 
+        // If statement
         ASTNode::If { condition, then_branch, else_branch } => {
             if evaluate_condition(*condition, env) {
                 interpret(*then_branch, env);
@@ -24,30 +27,38 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
             }
         }
 
+        // While statement
         ASTNode::While { condition, body } => {
+            // Loop until the condition becomes false
+            while evaluate_condition(*condition.clone(), env) {
+                println!("While loop condition is true. Current env: {:?}", env);
 
-                if evaluate_condition(*condition.clone(), env) {
-                    // Debugging the condition and value of `x`
-                    println!("While loop condition is true. Current env: {:?}", env);
-
-                    // Interpret the body of the loop
+                // Make sure we process each statement in the body separately
+                if let ASTNode::Block(ref mut statements) = *body.clone() {
+                    for statement in statements.iter() {
+                        interpret(statement.clone(), env);  // Execute each statement in the block
+                    }
+                } else {
                     interpret(*body.clone(), env);
-
-                    // Print the updated environment after each iteration
-                    println!("Updated env after loop body: {:?}", env);
-
-                    // Re-evaluate the condition and check if it should break the loop
-                    //
                 }
 
+                // Re-evaluate the condition with the updated environment
                 if !evaluate_condition(*condition.clone(), env) {
                     println!("Exiting loop, condition is now false.");
-
+                    break;
+                }
             }
-    }
+        }
 
-    _ => {}
-}
+        // Block of multiple statements
+        ASTNode::Block(statements) => {
+            for statement in statements {
+                interpret(statement, env);  // Interpret each statement in the block
+            }
+        }
+
+        _ => {}
+    }
 }
 
 // Hilfsfunktion zur Auswertung von Ausdrücken
