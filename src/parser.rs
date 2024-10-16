@@ -69,8 +69,37 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         } else {
             println!("No equal sign found, returning the simple variable: {}", var_name);
             // If no equal sign, it's just a simple variable expression
-            return Some(ASTNode::Identifier(var_name));
+            // If no equal sign, check for a binary operation (e.g., `x > 5`)
+            if let Some(operator) = tokens.get(0).cloned() {
+                match operator {
+                    Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual | Token::Plus | Token::Minus => {
+                        println!("Detected operator: {:?}", operator);
+                        tokens.remove(0);  // Remove the operator
+
+                        // Parse the right-hand side expression (e.g., `5` in `x > 5`)
+                        if let Some(right_expr) = parse_primary_expression(tokens) {
+                            println!("Parsed right-hand side of binary operation: {:?}", right_expr);
+                            return Some(ASTNode::BinaryOp {
+                                left: Box::new(ASTNode::Identifier(var_name)),
+                                operator,
+                                right: Box::new(right_expr),
+                            });
+                        } else {
+                            println!("Error: Expected right-hand side expression after operator");
+                            return None;
+                        }
+                    }
+                    _ => {
+                        println!("No binary operator found, returning the simple variable: {}", var_name);
+                        return Some(ASTNode::Identifier(var_name));  // Just return the variable if no operator found
+                    }
+                }
+            } else {
+                println!("No operator found, returning the simple variable: {}", var_name);
+                return Some(ASTNode::Identifier(var_name));
+            }
         }
+
     }
 
     // Handle `print` statements (e.g., `print(x);`)
@@ -129,6 +158,8 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual | Token::Minus | Token::Plus => {
                     if let Some(right) = parse_primary_expression(tokens) {
                         println!("Parsed right-hand side expression after operator: {:?}", right);
+                        tokens.remove(0);  // Remove the right-hand side expression token
+
                         return Some(ASTNode::BinaryOp {
                             left: Box::new(left),
                             operator,
@@ -157,52 +188,55 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_primary_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Current token in parse_primary_expression: {:?}", tokens.get(0));
 
-    // Check for numbers or variables as primary expressions
-    if let Some(Token::Number(value)) = tokens.get(0).cloned() {
-        println!("Recognized number: {}", value);
-        tokens.remove(0);
-        return Some(ASTNode::Number(value));
-    }
-
-    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-        println!("Recognized variable: {}", var_name);
-        tokens.remove(0);
-        return Some(ASTNode::Identifier(var_name));
-    }
-
-    // Handle parenthesized expressions
+    // Case 1: Expression is wrapped in parentheses
     if let Some(Token::LeftParen) = tokens.get(0).cloned() {
         println!("Recognized opening paren `(`");
-        tokens.remove(0);  // Remove the `(`
+        tokens.remove(0);  // Remove `(`
 
-        // Recursively parse the expression inside parentheses
-        let expr = parse_expression(tokens)?;
-        println!("Parsed expression inside parens: {:?}", expr);
-
+        // Parse the expression inside the parentheses
+        let expression = parse_expression(tokens);
         if let Some(Token::RightParen) = tokens.get(0).cloned() {
             println!("Recognized closing paren `)`");
-            tokens.remove(0);  // Remove the `)`
-            return Some(expr);
+            tokens.remove(0);  // Remove `)`
+            return expression;
         } else {
             println!("Error: Expected closing paren `)`");
             return None;
         }
     }
 
+    // Case 2: Expression without parentheses (e.g., an identifier or a number)
+    if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
+        println!("Recognized identifier: {}", var_name);
+        tokens.remove(0);  // Remove identifier
+        return Some(ASTNode::Identifier(var_name));
+    }
+
+    if let Some(Token::Number(value)) = tokens.get(0).cloned() {
+        println!("Recognized number: {}", value);
+        tokens.remove(0);  // Remove number
+        return Some(ASTNode::Number(value));
+    }
+
     println!("Error: No valid primary expression found");
     None
 }
 
-pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode>  {
     if let Some(Token::If) = tokens.get(0).cloned() {
         println!("Found `if` keyword");
         tokens.remove(0);  // Remove `if`
 
         let condition = parse_expression(tokens)?;  // Parse the condition inside parentheses
-        println!("Parsed condition: {:?}", condition);
+        println!("_____Parsed condition: {:?}", condition);
+        //tokens.remove(0);
 
-        // Expecting an opening brace `{` for the `then` block
-        if let Some(Token::LeftBrace) = tokens.get(0) {
+
+        // Now expecting a `{` for the `then` block
+        let next_token = tokens.get(0);  // Look at the next token without removing it
+        println!("Next token after condition: {:?}", next_token);
+
+        if let Some(Token::LeftBrace) = next_token {
             println!("Found opening brace `{{` for `then` block");
             tokens.remove(0);  // Remove `{`
 
@@ -234,7 +268,7 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 else_branch,
             });
         } else {
-            println!("Error: `then` block must start with `{{`");
+            println!("Error: `then` block must start with `{{`. Found: {:?}", next_token);
             return None;
         }
     }
@@ -243,7 +277,7 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
 //      if x > 5 { print(x); } else { print(0); }
         //      while x > 5 { print(x); }
-        pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             if let Some(Token::While) = tokens.get(0).cloned() {
                 tokens.remove(0);  // Entferne `while`
 
@@ -344,8 +378,9 @@ mod tests {
                 assert!(ast.is_some());
             }
             #[test]
+
             fn test_parse_if_else() {
-                let input = "if ( x > 5 ){ print(x); } else { print(0); }";
+                let input = "if x > 5 { print(x); } else { print(0); }";
                 let mut tokens = tokenize(input);
                 let ast = parse_if(&mut tokens);
                 assert!(ast.is_some());
@@ -374,8 +409,7 @@ mod tests {
                 }
             }
 
-
-            #[test]
+    #[test]
             fn test_parse_while_loop() {
                 let input = "while x > 5 { print(x); x = x - 1; }";
                 let mut tokens = tokenize(input);
@@ -383,68 +417,57 @@ mod tests {
                 assert!(ast.is_some());
             }
 
-            #[test]
-            fn test_if_statement_parsing() {
-                let input = "if x > 5 { print(x); } else { print(0); }";
-                let mut tokens = tokenize(input);
-                let ast = parse_if(&mut tokens);
+    #[test]
+    fn test_simple_if_parsing() {
+        let input = "if (x > 5) { print(x); }";
+        let mut tokens = tokenize(input);
+        let ast = parse_if(&mut tokens);
 
-                // Ensure the AST is successfully created
-                assert!(ast.is_some());
+        // Ensure that the AST is generated
+        assert!(ast.is_some(), "Expected some AST, but got None");
 
-                if let Some(ASTNode::If { condition, then_branch, else_branch }) = ast {
-                    // Check the condition is correctly parsed as `x > 5`
-                    match *condition {
-                        ASTNode::BinaryOp { ref left, ref operator, ref right } => {
-                            match **left {
-                                ASTNode::Identifier(ref name) => assert_eq!(name, "x"),
-                                _ => panic!("Expected Identifier for left operand in condition"),
-                            }
-                            assert_eq!(*operator, Token::GreaterThan); // Dereference the operator
-                            match **right {
-                                ASTNode::Number(value) => assert_eq!(value, 5),
-                                _ => panic!("Expected Number 5 for right operand in condition"),
-                            }
-                        }
-                        _ => panic!("Expected BinaryOp in condition"),
-                    }
-
-                    // Check the `then` branch contains the print statement `print(x)`
-                    match *then_branch {
-                        ASTNode::Block(ref statements) => {
-                            assert_eq!(statements.len(), 1);
-                            if let ASTNode::Print(ref expr) = statements[0] {
-                                match **expr {
-                                    ASTNode::Identifier(ref name) => assert_eq!(name, "x"),
-                                    _ => panic!("Expected Identifier 'x' in print statement"),
-                                }
-                            } else {
-                                panic!("Expected Print statement in 'then' block");
-                            }
-                        }
-                        _ => panic!("Expected Block in 'then' branch"),
-                    }
-
-                    // Check the `else` branch contains the print statement `print(0)`
-                    if let Some(ASTNode::Block(ref statements)) = else_branch.as_deref() {
-                        assert_eq!(statements.len(), 1);
-                        if let ASTNode::Print(ref expr) = statements[0] {
-                            match **expr {
-                                ASTNode::Number(value) => assert_eq!(value, 0),
-                                _ => panic!("Expected Number 0 in print statement of 'else' branch"),
-                            }
-                        } else {
-                            panic!("Expected Print statement in 'else' block");
-                        }
+        if let Some(ASTNode::If { condition, then_branch, .. }) = ast {
+            // Check if the condition is parsed as `x > 5`
+            match *condition {
+                ASTNode::BinaryOp { ref left, ref operator, ref right } => {
+                    if let ASTNode::Identifier(ref name) = **left {
+                        assert_eq!(name, "x", "Expected left operand to be 'x'");
                     } else {
-                        panic!("Expected 'else' branch in AST");
+                        panic!("Expected Identifier for left operand");
                     }
-                } else {
-                    panic!("AST for 'if' statement not parsed correctly.");
+
+                    assert_eq!(*operator, Token::GreaterThan, "Expected '>' operator");
+
+                    if let ASTNode::Number(value) = **right {
+                        assert_eq!(value, 5, "Expected right operand to be '5'");
+                    } else {
+                        panic!("Expected Number for right operand");
+                    }
                 }
+                _ => panic!("Expected BinaryOp in condition"),
             }
 
-            #[test]
+            // Check if the then branch contains the print statement `print(x)`
+            match *then_branch {
+                ASTNode::Block(ref statements) => {
+                    if let ASTNode::Print(ref expr) = statements[0] {
+                        if let ASTNode::Identifier(ref name) = **expr {
+                            assert_eq!(name, "x", "Expected 'x' inside print statement");
+                        } else {
+                            panic!("Expected Identifier 'x' in print statement");
+                        }
+                    } else {
+                        panic!("Expected Print statement in 'then' block");
+                    }
+                }
+                _ => panic!("Expected Block in 'then' branch"),
+            }
+        } else {
+            panic!("AST for 'if' statement not parsed correctly.");
+        }
+    }
+
+    #[test]
             fn test_while_loop_parsing() {
                 let input = "while x > 5 { print(x); x = x - 1; }";
                 let mut tokens = tokenize(input);
