@@ -23,7 +23,11 @@ pub enum Token {
     If,
     Else,
     While,
+    For,
+    Til,
+    In,
     Eof,
+
 }
 pub fn tokenize(input: &str) -> Vec<Token> {
     let mut tokens = Vec::new();  // Liste der erkannten Tokens
@@ -96,6 +100,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 tokens.push(Token::Semicolon);
                 println!("Erkannter Token: `;` (Semicolon)");
             }
+
             ' ' | '\n' => {
                 // Ignoriere Leerzeichen und Zeilenumbrüche
             }
@@ -137,6 +142,18 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "while" => {
                         tokens.push(Token::While);
                         println!("Erkannter Token: `while` (While)");
+                    }
+                    "for" =>{
+                        tokens.push(Token::For);
+                        println!("Erkannter Token: `for` (For)");
+                    }
+                    ".." => {
+                        tokens.push(Token::Til);
+                        println!("Erkannter Token: `..` (Til)");
+                    }
+                    "in"=>{
+                        tokens.push(Token::In);
+                        println!("Erkannter Token: `in` (In)");
                     }
                     _ => {
                         tokens.push(Token::Identifier(ident.clone()));
