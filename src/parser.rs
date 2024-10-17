@@ -16,6 +16,11 @@ pub enum ASTNode {
         condition: Box<ASTNode>,
         body: Box<ASTNode>,
     },
+    For {
+        iterator: Box<ASTNode>,
+        iterable: Box<ASTNode>,
+        body: Box<ASTNode>,
+    },
     Print(Box<ASTNode>),
 }
 
@@ -279,4 +284,43 @@ pub fn parse_binary_expression_or_variable(tokens: &mut Vec<Token>, var_name: St
         }
     }
     Some(ASTNode::Identifier(var_name))
+}
+
+pub fn parse_for(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    if let Some(Token::For) = tokens.get(0).cloned() {
+        tokens.remove(0);  // Remove `for`
+
+        // Expect an identifier (loop variable)
+        let iterator = match tokens.get(0).cloned() {
+            Some(Token::Identifier(var_name)) => {
+                tokens.remove(0);  // Remove the identifier
+                ASTNode::Identifier(var_name)
+            }
+            _ => {
+                println!("Error: Expected identifier in for loop.");
+                return None;
+            }
+        };
+
+        // Expect the `in` keyword
+        if let Some(Token::In) = tokens.get(0).cloned() {
+            tokens.remove(0);  // Remove `in`
+        } else {
+            println!("Error: Expected 'in' in for loop.");
+            return None;
+        }
+
+        // Parse the iterable expression (e.g., range or collection)
+        let iterable = parse_expression(tokens)?;
+
+        // Expect a block `{}` for the loop body
+        let body = parse_block(tokens)?;
+
+        return Some(ASTNode::For {
+            iterator: Box::new(iterator),
+            iterable: Box::new(iterable),
+            body: Box::new(body),
+        });
+    }
+    None
 }
