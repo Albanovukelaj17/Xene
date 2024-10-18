@@ -71,16 +71,44 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Starting parse_expression, current token: {:?}", tokens.get(0));
 
+    // Case 0: Parse a range expression (e.g., `1..10`)
+    if let Some(Token::Number(start)) = tokens.get(0).cloned() {
+        tokens.remove(0); // Remove the start number
+
+        // Check if the next token is `..`
+        if let Some(Token::Range) = tokens.get(0).cloned() {
+            tokens.remove(0); // Remove the range operator `..`
+
+            // Check if there's a number for the end value of the range
+            if let Some(Token::Number(end)) = tokens.get(0).cloned() {
+                tokens.remove(0); // Remove the end number
+
+                // Create the Range node
+                println!("___detected range: {}..{}", start, end);
+                return Some(ASTNode::Range {
+                    start: Box::new(ASTNode::Number(start)),
+                    end: Box::new(ASTNode::Number(end)),
+                });
+            } else {
+                println!("Error: Expected a number after `..` for the range end.");
+                return None;
+            }
+        } else {
+            // If there's no `..`, treat it as a number expression
+            return Some(ASTNode::Number(start));
+        }
+    }
+
     // Case 1: Parse an assignment expression (e.g., `x = x - 1`)
     if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-        tokens.remove(0);  // Remove the variable name (e.g., `x`)
+        tokens.remove(0); // Remove the variable name (e.g., `x`)
 
         // Check if the next token is an equal sign (`=`)
         if let Some(Token::Equal) = tokens.get(0).cloned() {
-            tokens.remove(0);  // Remove the equal sign `=`
+            tokens.remove(0); // Remove the equal sign `=`
 
             // Parse the right-hand side of the assignment (e.g., `x - 1`)
-            if let Some(right_expr) = parse_binary_op(tokens) {
+            if let Some(right_expr) = parse_expression(tokens) {
                 println!("Parsed assignment: {} = {:?}", var_name, right_expr);
                 return Some(ASTNode::Assignment {
                     var_name,
@@ -109,6 +137,7 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("No valid expression found, returning `None`");
     None
 }
+
 
 pub fn parse_print(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     tokens.remove(0);  // Remove `print`
@@ -188,23 +217,27 @@ pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    if let Some(Token::LeftBrace) = tokens.get(0) {
-        tokens.remove(0);  // Remove `{`
+    if let Some(Token::LeftBrace) = tokens.get(0).cloned() {
+        tokens.remove(0); // Remove `{`
         let mut statements = Vec::new();
 
+        // Parse each statement until we encounter a `}`
         while let Some(token) = tokens.get(0) {
             if let Token::RightBrace = token {
-                tokens.remove(0);  // Remove `}`
+                tokens.remove(0); // Remove `}`
                 return Some(ASTNode::Block(statements));
             }
 
+            // Try parsing a statement inside the block
             if let Some(statement) = parse_expression(tokens) {
                 statements.push(statement);
-                if let Some(Token::Semicolon) = tokens.get(0) {
-                    tokens.remove(0);  // Remove `;`
+
+                // Optionally, check for a semicolon after each statement
+                if let Some(Token::Semicolon) = tokens.get(0).cloned() {
+                    tokens.remove(0); // Remove `;`
                 }
             } else {
-                println!("Error parsing statement in block.");
+                println!("Error: Failed to parse a statement inside the block.");
                 return None;
             }
         }
@@ -212,6 +245,7 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         println!("Error: Block was not properly closed with `}}`.");
         return None;
     }
+
     println!("Error: Block must start with `{{`.");
     None
 }
@@ -342,10 +376,10 @@ pub fn parse_for(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
         // Parse the iterable (e.g., a range)
         let iterable = parse_expression(tokens)?; // This should handle range expressions like `1..10`
-
+        println!("___detected 1..10,{:?}", iterable);
         // Parse the loop body
         let body = parse_block(tokens)?;
-
+        println!("____detected block,{:?}",body);
         // Return the ASTNode for the for loop
         return Some(ASTNode::For {
             iterator: Box::new(iterator),

@@ -295,9 +295,11 @@
             // Check that the iterator is "i"
             if let ASTNode::Identifier(var_name) = *iterator {
                 assert_eq!(var_name, "i");
+
             } else {
                 panic!("Expected an identifier for the iterator.");
             }
+            println!("_____checked identifier i");
 
             // Check that the iterable is a range from 0 to 10
             if let ASTNode::Range { start, end } = *iterable {
@@ -315,6 +317,7 @@
             } else {
                 panic!("Expected a range expression for the iterable.");
             }
+            println!("_____checked range start end 0 10");
 
             // Check that the body contains the `print(i)` statement
             if let ASTNode::Block(statements) = *body {
@@ -419,6 +422,30 @@
 
         // After the loop, `x` should be 5
         assert_eq!(env.get("x"), Some(&5));
+    }
+
+    #[test]
+    fn test_interpret_for_loop() {
+        let input = "var total = 0; for i in 1..4 { total = total + i; }";
+        let mut tokens = tokenize(input);
+        let mut env = HashMap::new();
+
+        // Parse the assignment statement
+        if let Some(ASTNode::Assignment { var_name, value }) = parse_assignment(&mut tokens) {
+            interpret(ASTNode::Assignment { var_name, value }, &mut env);
+        } else {
+            panic!("Expected an assignment statement for 'var total = 0;'");
+        }
+
+        // Parse the for loop and interpret it
+        if let Some(ast) = parse_for(&mut tokens) {
+            interpret(ast, &mut env);
+        } else {
+            panic!("Expected a for loop after 'var total = 0;'");
+        }
+
+        // The expected value of `total` should be 1 + 2 + 3 = 6
+        assert_eq!(*env.get("total").unwrap(), 6);
     }
 
 
@@ -535,6 +562,9 @@
         // Manual verification for the printed value (0)
     }
 
+
+
+    //INTEGRATE TESTS COMPLEX
     #[test]
     fn test_multiple_assignments_and_loop() {
         let input = "

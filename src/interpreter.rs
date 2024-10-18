@@ -56,6 +56,38 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
                 interpret(statement, env);  // Interpret each statement in the block
             }
         }
+        ASTNode::For {
+            iterator,
+            iterable,
+            body,
+        } => {
+            // Assume `iterator` is an `ASTNode::Identifier`
+            if let ASTNode::Identifier(var_name) = *iterator {
+                // Assume `iterable` is an `ASTNode::Range` with `start` and `end`
+                if let ASTNode::Range { start, end } = *iterable {
+                    let start_val = evaluate_expression(*start, env);
+                    let end_val = evaluate_expression(*end, env);
+
+                    println!("For loop: iterating from {} to {}", start_val, end_val);
+
+                    // Loop over the range and update the iterator variable in the environment
+                    for i in start_val..end_val {
+                        println!("For loop iteration: {} = {}", var_name, i);
+                        env.insert(var_name.clone(), i);
+
+                        // Interpret the body of the `for` loop for each iteration
+                        interpret(*body.clone(), env);
+                    }
+
+                    // Remove the iterator from the environment after the loop finishes
+                    env.remove(&var_name);
+                } else {
+                    println!("Error: Expected a range as the iterable in the `for` loop.");
+                }
+            } else {
+                println!("Error: Expected an identifier as the iterator in the `for` loop.");
+            }
+        }
 
         _ => {}
     }
