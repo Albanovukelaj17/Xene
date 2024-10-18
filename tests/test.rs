@@ -288,7 +288,7 @@
         let input = "for i in 0..10 { print(i); }";
         let mut tokens = tokenize(input);
         let ast = parse_for(&mut tokens);
-
+        println!("____parsed for");
         assert!(ast.is_some());
 
         if let Some(ASTNode::For { iterator, iterable, body }) = ast {

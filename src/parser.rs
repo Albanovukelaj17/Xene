@@ -71,14 +71,17 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     println!("Starting parse_expression, current token: {:?}", tokens.get(0));
 
+    // Case 1: Parse an assignment expression (e.g., `x = x - 1`)
     if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-        tokens.remove(0);  // Remove the variable
+        tokens.remove(0);  // Remove the variable name (e.g., `x`)
 
+        // Check if the next token is an equal sign (`=`)
         if let Some(Token::Equal) = tokens.get(0).cloned() {
             tokens.remove(0);  // Remove the equal sign `=`
 
-            // Parse the right-hand side expression (e.g., `x - 1`)
+            // Parse the right-hand side of the assignment (e.g., `x - 1`)
             if let Some(right_expr) = parse_binary_op(tokens) {
+                println!("Parsed assignment: {} = {:?}", var_name, right_expr);
                 return Some(ASTNode::Assignment {
                     var_name,
                     value: Box::new(right_expr),
@@ -87,18 +90,18 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 println!("Error: Expected an expression after `=`");
                 return None;
             }
-        } else {
-            // Handle a binary operation or return a simple variable identifier
-            return parse_binary_expression_or_variable(tokens, var_name);
         }
+
+        // Case 2: Parse binary expressions or return the identifier itself
+        return parse_binary_expression_or_variable(tokens, var_name);
     }
 
-    // Handle `print` statements
+    // Case 3: Handle `print` statements (e.g., `print(x)`)
     if let Some(Token::Print) = tokens.get(0).cloned() {
         return parse_print(tokens);
     }
 
-    // Handle binary operations or primary expressions
+    // Case 4: Parse primary expressions and potential binary operations (e.g., `5 + 3`)
     if let Some(left) = parse_primary_expression(tokens) {
         return parse_binary_op_with_left(tokens, left);
     }
@@ -109,11 +112,17 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
 pub fn parse_print(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     tokens.remove(0);  // Remove `print`
+
+    // Expect an opening parenthesis `(` after `print`
     if let Some(Token::LeftParen) = tokens.get(0).cloned() {
         tokens.remove(0);  // Remove `(`
+
+        // Expect the expression inside the parentheses (e.g., the variable to print)
         if let Some(expression) = parse_primary_expression(tokens) {
+            // Expect the closing parenthesis `)`
             if let Some(Token::RightParen) = tokens.get(0).cloned() {
                 tokens.remove(0);  // Remove `)`
+                // Now expect a semicolon `;` to end the statement
                 if let Some(Token::Semicolon) = tokens.get(0).cloned() {
                     tokens.remove(0);  // Remove `;`
                     return Some(ASTNode::Print(Box::new(expression)));
@@ -272,66 +281,79 @@ pub fn parse_binary_op_with_left(tokens: &mut Vec<Token>, left: ASTNode) -> Opti
     Some(left)
 }
 
-pub fn parse_binary_expression_or_variable(tokens: &mut Vec<Token>, var_name: String) -> Option<ASTNode> {
+fn parse_binary_expression_or_variable(tokens: &mut Vec<Token>, var_name: String) -> Option<ASTNode> {
+    println!("Detected variable or potential binary expression: {}", var_name);
+
+    // If the next token is a binary operator, treat it as a binary expression
     if let Some(operator) = tokens.get(0).cloned() {
         match operator {
-            Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual | Token::Plus | Token::Minus => {
+            Token::Plus | Token::Minus | Token::Multiply | Token::Divide |
+            Token::GreaterThan | Token::LessThan | Token::GreaterEqual | Token::LessEqual => {
                 tokens.remove(0);  // Remove the operator
+
+                // Parse the right-hand side of the binary operation
                 if let Some(right_expr) = parse_primary_expression(tokens) {
+                    println!("Parsed right-hand side of binary operation: {:?}", right_expr);
                     return Some(ASTNode::BinaryOp {
                         left: Box::new(ASTNode::Identifier(var_name)),
                         operator,
                         right: Box::new(right_expr),
                     });
+                } else {
+                    println!("Error: Expected right-hand side expression after operator");
+                    return None;
                 }
             }
-            _ => return Some(ASTNode::Identifier(var_name)),
+            _ => {
+                println!("No valid operator found, treating as a simple variable.");
+                return Some(ASTNode::Identifier(var_name));
+            }
         }
     }
+
+    println!("No operator found, returning simple variable: {}", var_name);
     Some(ASTNode::Identifier(var_name))
 }
 
 pub fn parse_for(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::For) = tokens.get(0).cloned() {
-        tokens.remove(0);  // Remove `for`
-
-        // Expect an identifier (loop variable)
+        tokens.remove(0); // Remove `for`
+        println!("_____Detected for");
+        // Parse the loop variable (iterator)
         let iterator = match tokens.get(0).cloned() {
             Some(Token::Identifier(var_name)) => {
-                tokens.remove(0);  // Remove the identifier
-                ASTNode::Identifier(var_name)
-            }
+                tokens.remove(0); // Remove the identifier
+                ASTNode::Identifier(var_name) }
             _ => {
                 println!("Error: Expected identifier in for loop.");
                 return None;
             }
         };
+        println!("______Detected Identifier i for example ");
 
         // Expect the `in` keyword
         if let Some(Token::In) = tokens.get(0).cloned() {
-            tokens.remove(0);  // Remove `in`
+            tokens.remove(0); // Remove `in`
+            println!("______Detected  in  ");
         } else {
             println!("Error: Expected 'in' in for loop.");
             return None;
         }
 
-        // Parse the iterable expression (e.g., range or collection)
-        let iterable = parse_expression(tokens)?;
+        // Parse the iterable (e.g., a range)
+        let iterable = parse_expression(tokens)?; // This should handle range expressions like `1..10`
 
-        // Ensure the iterable is a range
-        if let ASTNode::Range { .. } = iterable {
-            // Expect a block `{}` for the loop body
-            let body = parse_block(tokens)?;
+        // Parse the loop body
+        let body = parse_block(tokens)?;
 
-            return Some(ASTNode::For {
-                iterator: Box::new(iterator),
-                iterable: Box::new(iterable),
-                body: Box::new(body),
-            });
-        } else {
-            println!("Error: Expected a range expression for the iterable.");
-            return None;
-        }
+        // Return the ASTNode for the for loop
+        return Some(ASTNode::For {
+            iterator: Box::new(iterator),
+            iterable: Box::new(iterable),
+            body: Box::new(body),
+        });
     }
+
+    println!("Error: Not a 'for' loop.");
     None
 }
