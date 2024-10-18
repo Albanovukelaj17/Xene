@@ -26,6 +26,7 @@ pub enum Token {
     For,
     Til,
     In,
+    Range, // 1..10
     Eof,
 
 }
@@ -99,6 +100,16 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             ';' => {
                 tokens.push(Token::Semicolon);
                 println!("Erkannter Token: `;` (Semicolon)");
+            }
+            '.' => {
+                // Check for two consecutive dots `..`
+                if i + 1 < chars.len() && chars[i + 1] == '.' {
+                    tokens.push(Token::Range);
+                    println!("Erkannter Token: `..` (Range)");
+                    i += 1;  // Skip the second dot
+                } else {
+                    println!("Unbekanntes Zeichen: .");
+                }
             }
 
             ' ' | '\n' => {

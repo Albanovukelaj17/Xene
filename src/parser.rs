@@ -21,7 +21,12 @@ pub enum ASTNode {
         iterable: Box<ASTNode>,
         body: Box<ASTNode>,
     },
+    Range{
+        start: Box<ASTNode>,
+        end: Box<ASTNode>,
+    },
     Print(Box<ASTNode>),
+
 }
 
 pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
@@ -313,14 +318,20 @@ pub fn parse_for(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         // Parse the iterable expression (e.g., range or collection)
         let iterable = parse_expression(tokens)?;
 
-        // Expect a block `{}` for the loop body
-        let body = parse_block(tokens)?;
+        // Ensure the iterable is a range
+        if let ASTNode::Range { .. } = iterable {
+            // Expect a block `{}` for the loop body
+            let body = parse_block(tokens)?;
 
-        return Some(ASTNode::For {
-            iterator: Box::new(iterator),
-            iterable: Box::new(iterable),
-            body: Box::new(body),
-        });
+            return Some(ASTNode::For {
+                iterator: Box::new(iterator),
+                iterable: Box::new(iterable),
+                body: Box::new(body),
+            });
+        } else {
+            println!("Error: Expected a range expression for the iterable.");
+            return None;
+        }
     }
     None
 }

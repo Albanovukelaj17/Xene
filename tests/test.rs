@@ -1,7 +1,7 @@
 
     use std::collections::HashMap;
     use Xene::lexer::{tokenize, Token};
-    use Xene::parser::{parse_assignment, parse_expression, parse_if, parse_while, ASTNode};
+    use Xene::parser::{parse_assignment, parse_expression, parse_for, parse_if, parse_while, ASTNode};
     use Xene::interpreter::interpret;
 
 
@@ -80,7 +80,33 @@
     }
 
 
-   // PARSER-----------
+
+
+    #[test]
+    fn test_tokenize_for_loop() {
+        let input = "for i in 0..10 { print(i); }";
+        let tokens = tokenize(input);
+
+        assert_eq!(tokens.len(), 14); // for, i, in, 0, .., 10, {, print, (, i, ), ;, }
+
+        assert_eq!(tokens[0], Token::For); // for
+        assert!(matches!(tokens[1], Token::Identifier(_))); // i
+        assert_eq!(tokens[2], Token::In); // in
+        assert!(matches!(tokens[3], Token::Number(0))); // 0
+        assert_eq!(tokens[4], Token::Range); // ..
+        assert!(matches!(tokens[5], Token::Number(10))); // 10
+        assert_eq!(tokens[6], Token::LeftBrace); // {
+        assert_eq!(tokens[7], Token::Print); // print
+        assert_eq!(tokens[8], Token::LeftParen); // (
+        assert!(matches!(tokens[9], Token::Identifier(_))); // i
+        assert_eq!(tokens[10], Token::RightParen); // )
+        assert_eq!(tokens[11], Token::Semicolon); // ;
+        assert_eq!(tokens[12], Token::RightBrace); // }
+    }
+
+
+
+    // PARSER-----------
 
 
 
@@ -257,7 +283,64 @@
         }
     }
 
-//INTERPRETER---------
+    #[test]
+    fn test_parse_for_loop() {
+        let input = "for i in 0..10 { print(i); }";
+        let mut tokens = tokenize(input);
+        let ast = parse_for(&mut tokens);
+
+        assert!(ast.is_some());
+
+        if let Some(ASTNode::For { iterator, iterable, body }) = ast {
+            // Check that the iterator is "i"
+            if let ASTNode::Identifier(var_name) = *iterator {
+                assert_eq!(var_name, "i");
+            } else {
+                panic!("Expected an identifier for the iterator.");
+            }
+
+            // Check that the iterable is a range from 0 to 10
+            if let ASTNode::Range { start, end } = *iterable {
+                if let ASTNode::Number(start_value) = *start {
+                    assert_eq!(start_value, 0);
+                } else {
+                    panic!("Expected start of range to be 0.");
+                }
+
+                if let ASTNode::Number(end_value) = *end {
+                    assert_eq!(end_value, 10);
+                } else {
+                    panic!("Expected end of range to be 10.");
+                }
+            } else {
+                panic!("Expected a range expression for the iterable.");
+            }
+
+            // Check that the body contains the `print(i)` statement
+            if let ASTNode::Block(statements) = *body {
+                assert_eq!(statements.len(), 1);
+                if let ASTNode::Print(ref expr) = statements[0] {
+                    if let ASTNode::Identifier(ref var_name) = **expr {
+                        assert_eq!(var_name, "i");
+                    } else {
+                        panic!("Expected identifier 'i' in print statement.");
+                    }
+                } else {
+                    panic!("Expected a print statement in the for loop body.");
+                }
+            } else {
+                panic!("Expected a block for the for loop body.");
+            }
+        } else {
+            panic!("Expected a `For` node.");
+        }
+    }
+
+
+
+
+
+    //INTERPRETER---------
 
 
     #[test]
