@@ -83,7 +83,6 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             if let Some(Token::Number(end)) = tokens.get(0).cloned() {
                 tokens.remove(0); // Remove the end number
 
-                // Create the Range node
                 println!("___detected range: {}..{}", start, end);
                 return Some(ASTNode::Range {
                     start: Box::new(ASTNode::Number(start)),
@@ -93,21 +92,20 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 println!("Error: Expected a number after `..` for the range end.");
                 return None;
             }
-        } else {
-            // If there's no `..`, treat it as a number expression
-            return Some(ASTNode::Number(start));
         }
+
+        // If no range, treat it as a primary number expression and continue parsing.
+        return parse_binary_op_with_left(tokens, ASTNode::Number(start));
     }
 
     // Case 1: Parse an assignment expression (e.g., `x = x - 1`)
     if let Some(Token::Identifier(var_name)) = tokens.get(0).cloned() {
-        tokens.remove(0); // Remove the variable name (e.g., `x`)
+        tokens.remove(0); // Remove the variable name
 
         // Check if the next token is an equal sign (`=`)
         if let Some(Token::Equal) = tokens.get(0).cloned() {
             tokens.remove(0); // Remove the equal sign `=`
 
-            // Parse the right-hand side of the assignment (e.g., `x - 1`)
             if let Some(right_expr) = parse_expression(tokens) {
                 println!("Parsed assignment: {} = {:?}", var_name, right_expr);
                 return Some(ASTNode::Assignment {
@@ -120,16 +118,16 @@ pub fn parse_expression(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             }
         }
 
-        // Case 2: Parse binary expressions or return the identifier itself
+        // Parse binary expressions or return the identifier itself
         return parse_binary_expression_or_variable(tokens, var_name);
     }
 
-    // Case 3: Handle `print` statements (e.g., `print(x)`)
+    // Handle `print` statements
     if let Some(Token::Print) = tokens.get(0).cloned() {
         return parse_print(tokens);
     }
 
-    // Case 4: Parse primary expressions and potential binary operations (e.g., `5 + 3`)
+    // Parse primary expressions and potential binary operations
     if let Some(left) = parse_primary_expression(tokens) {
         return parse_binary_op_with_left(tokens, left);
     }
