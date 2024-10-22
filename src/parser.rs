@@ -25,6 +25,11 @@ pub enum ASTNode {
         start: Box<ASTNode>,
         end: Box<ASTNode>,
     },
+    Switch {
+        expression: Box<ASTNode>,
+        cases: Vec<(ASTNode, ASTNode)>, // Each case has a value and a block
+        default: Option<Box<ASTNode>>,  // Optional default block
+    },
     Print(Box<ASTNode>),
 
 }
@@ -388,4 +393,75 @@ pub fn parse_for(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 
     println!("Error: Not a 'for' loop.");
     None
+}
+pub fn parse_switch(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    if let Some(Token::Switch) = tokens.get(0).cloned() {
+        tokens.remove(0); // Remove `switch`
+        println!("_____Detected switch");
+
+        // Parse the expression after `switch`
+        let expression = parse_expression(tokens)?;
+        println!("______Parsed switch expression");
+
+        if let Some(Token::LeftBrace) = tokens.get(0).cloned() {
+            tokens.remove(0); // Remove `{`
+        } else {
+            println!("Error: Expected `{` after `switch` expression");
+            return None;
+        }
+
+        let mut cases = Vec::new();
+        let mut default_case = None;
+
+        // Parse `case` statements and `default` block
+        while let Some(token) = tokens.get(0).cloned() {
+            match token {
+                Token::Case => {
+                    tokens.remove(0); // Remove `case`
+                    let case_value = parse_expression(tokens)?;
+                    println!("______Parsed case value: {:?}", case_value);
+
+                    if let Some(Token::Colon) = tokens.get(0).cloned() {
+                        tokens.remove(0); // Remove `:`
+                    } else {
+                        println!("Error: Expected `:` after `case` value");
+                        return None;
+                    }
+
+                    let case_block = parse_block(tokens)?;
+                    cases.push((case_value, case_block));
+                }
+                Token::Default => {
+                    tokens.remove(0); // Remove `default`
+
+                    if let Some(Token::Colon) = tokens.get(0).cloned() {
+                        tokens.remove(0); // Remove `:`
+                    } else {
+                        println!("Error: Expected `:` after `default`");
+                        return None;
+                    }
+
+                    default_case = Some(Box::new(parse_block(tokens)?));
+                }
+                Token::RightBrace => {
+                    tokens.remove(0); // Remove `}`
+                    return Some(ASTNode::Switch {
+                        expression: Box::new(expression),
+                        cases,
+                        default: default_case,
+                    });
+                }
+                _ => {
+                    println!("Error: Unexpected token in `switch` block");
+                    return None;
+                }
+            }
+        }
+
+        println!("Error: Expected `}}` to close `switch` block");
+        None
+    } else {
+        println!("Error: Not a `switch` statement.");
+        None
+    }
 }

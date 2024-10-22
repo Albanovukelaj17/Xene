@@ -27,6 +27,11 @@ pub enum Token {
     Til,
     In,
     Range, // 1..10
+    Switch,
+    Case,
+    Default,
+    Colon,
+    Break,
     Eof,
 
 }
@@ -162,6 +167,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                         tokens.push(Token::Til);
                         println!("Erkannter Token: `..` (Til)");
                     }
+                    "switch" => tokens.push(Token::Switch),
+                    "case" => tokens.push(Token::Case),
+                    "default" => tokens.push(Token::Default),
+                    "break" => tokens.push(Token::Break),
                     "in"=>{
                         tokens.push(Token::In);
                         println!("Erkannter Token: `in` (In)");
