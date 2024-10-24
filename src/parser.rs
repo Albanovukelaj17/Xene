@@ -406,7 +406,7 @@ pub fn parse_switch(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         if let Some(Token::LeftBrace) = tokens.get(0).cloned() {
             tokens.remove(0); // Remove `{`
         } else {
-            println!("Error: Expected `{` after `switch` expression");
+            println!("Error: Expected `{{` after `switch` expression");
             return None;
         }
 

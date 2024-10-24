@@ -116,6 +116,10 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     println!("Unbekanntes Zeichen: .");
                 }
             }
+            ':' =>{tokens.push(Token::Colon);
+                println!("Erkannter Token: `:` (Colon)");
+
+            }
 
             ' ' | '\n' => {
                 // Ignoriere Leerzeichen und Zeilenumbrüche

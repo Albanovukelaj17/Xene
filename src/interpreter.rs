@@ -88,6 +88,26 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
                 println!("Error: Expected an identifier as the iterator in the `for` loop.");
             }
         }
+        ASTNode::Switch { expression, cases, default } => {
+            let expr_val = evaluate_expression(*expression, env);
+            let mut matched = false;
+
+            for (case_value, case_block) in cases {
+                let case_val = evaluate_expression(case_value, env);
+
+                if case_val == expr_val {
+                    matched = true;
+                    interpret(case_block, env);
+                    break;
+                }
+            }
+
+            if !matched {
+                if let Some(default_block) = default {
+                    interpret(*default_block, env);
+                }
+            }
+        }
 
         _ => {}
     }

@@ -1,7 +1,7 @@
 
     use std::collections::HashMap;
     use Xene::lexer::{tokenize, Token};
-    use Xene::parser::{parse_assignment, parse_expression, parse_for, parse_if, parse_while, ASTNode};
+    use Xene::parser::{parse_assignment, parse_expression, parse_for, parse_if, parse_while,parse_switch, ASTNode};
     use Xene::interpreter::interpret;
 
 
@@ -103,6 +103,59 @@
         assert_eq!(tokens[11], Token::Semicolon); // ;
         assert_eq!(tokens[12], Token::RightBrace); // }
     }
+    #[test]
+    fn test_tokenize_switch() {
+        let input = "switch x { case 1: print(1); case 2: print(2); default: print(0); }";
+        let tokens = tokenize(input);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Switch,
+                Token::Identifier("x".to_string()),
+                Token::LeftBrace,
+                Token::Case,
+                Token::Number(1),
+                Token::Colon,
+                Token::Print,
+                Token::LeftParen,
+                Token::Number(1),
+                Token::RightParen,
+                Token::Semicolon,
+                Token::Case,
+                Token::Number(2),
+                Token::Colon,
+                Token::Print,
+                Token::LeftParen,
+                Token::Number(2),
+                Token::RightParen,
+                Token::Semicolon,
+                Token::Default,
+                Token::Colon,
+                Token::Print,
+                Token::LeftParen,
+                Token::Number(0),
+                Token::RightParen,
+                Token::Semicolon,
+                Token::RightBrace,
+                Token::Eof,
+            ]
+        );
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -339,11 +392,49 @@
         }
     }
 
+    #[test]
+    fn test_parse_switch() {
+        let input = "switch x { case 1: print(1); case 2: print(2); default: print(0); }";
+        let mut tokens = tokenize(input);
+        if let Some(ast) = parse_switch(&mut tokens) {
+            match ast {
+                ASTNode::Switch { expression, cases, default } => {
+                    assert!(matches!(*expression, ASTNode::Identifier(_)));
+                    assert_eq!(cases.len(), 2);
+                    assert!(default.is_some());
+                }
+                _ => panic!("Parsed AST is not a switch statement"),
+            }
+        } else {
+            panic!("Failed to parse switch statement");
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 
     //INTERPRETER---------
+
+
+
+
+
 
 
     #[test]
@@ -563,8 +654,45 @@
     }
 
 
+    #[test]
+    fn test_interpret_switch() {
+        let input = "var x = 2; switch x { case 1: var result = 1; case 2: var result = 2; default: var result = 0; }";
+        let mut tokens = tokenize(input);
+        let mut env = HashMap::new();
+
+        // Parse the variable assignment
+        if let Some(ASTNode::Assignment { var_name, value }) = parse_assignment(&mut tokens) {
+            interpret(ASTNode::Assignment { var_name, value }, &mut env);
+        }
+
+        // Parse the switch statement and interpret it
+        if let Some(ast) = parse_switch(&mut tokens) {
+            interpret(ast, &mut env);
+        }
+
+        assert_eq!(*env.get("result").unwrap(), 2); // Expect `result` to be `2` because `x` is `2`
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     //INTEGRATE TESTS COMPLEX
+
+
+
+
     #[test]
     fn test_multiple_assignments_and_loop() {
         let input = "
