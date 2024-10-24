@@ -44,80 +44,70 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         match chars[i] {
             '=' => {
                 tokens.push(Token::Equal);
-                println!("Erkannter Token: `=` (Equal)");
+
             }
             '+' => {
                 tokens.push(Token::Plus);
-                println!("Erkannter Token: `+` (Plus)");
+
             }
             '-' => {
                 tokens.push(Token::Minus);
-                println!("Erkannter Token: `-` (Minus)");
+
             }
             '*' => {
                 tokens.push(Token::Multiply);
-                println!("Erkannter Token: `*` (Multiply)");
+
             }
             '/' => {
                 tokens.push(Token::Divide);
-                println!("Erkannter Token: `/` (Divide)");
+
             }
             '%' => {
                 tokens.push(Token::Modulo);
-                println!("Erkannter Token: `%` (Modulo)");
+
             }
             '(' => {
                 tokens.push(Token::LeftParen);
-                println!("Erkannter Token: `(` (LeftParen)");
+
             }
             ')' => {
                 tokens.push(Token::RightParen);
-                println!("Erkannter Token: `)` (RightParen)");
             }
             '{' => {
                 tokens.push(Token::LeftBrace);
-                println!("Erkannter Token: `{{` (LeftBrace)");
             }
             '}' => {
                 tokens.push(Token::RightBrace);
-                println!("Erkannter Token: `}}` (RightBrace)");
             }
             '>' => {
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
                     tokens.push(Token::GreaterEqual);
-                    println!("Erkannter Token: `>=` (GreaterEqual)");
                     i += 1;
                 } else {
                     tokens.push(Token::GreaterThan);
-                    println!("Erkannter Token: `>` (GreaterThan)");
                 }
             }
             '<' => {
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
                     tokens.push(Token::LessEqual);
-                    println!("Erkannter Token: `<=` (LessEqual)");
                     i += 1;
                 } else {
                     tokens.push(Token::LessThan);
-                    println!("Erkannter Token: `<` (LessThan)");
                 }
             }
             ';' => {
                 tokens.push(Token::Semicolon);
-                println!("Erkannter Token: `;` (Semicolon)");
             }
             '.' => {
                 // Check for two consecutive dots `..`
                 if i + 1 < chars.len() && chars[i + 1] == '.' {
                     tokens.push(Token::Range);
-                    println!("Erkannter Token: `..` (Range)");
                     i += 1;  // Skip the second dot
                 } else {
                     println!("Unbekanntes Zeichen: .");
                 }
             }
             ':' =>{tokens.push(Token::Colon);
-                println!("Erkannter Token: `:` (Colon)");
 
             }
 
@@ -133,7 +123,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 i -= 1;
                 let number = num.parse::<i64>().unwrap();
                 tokens.push(Token::Number(number));
-                println!("Erkannter Token: `{}` (Number)", number);
             }
             c if c.is_alphabetic() => {
                 let mut ident = String::new();
@@ -145,31 +134,24 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 match ident.as_str() {
                     "var" => {
                         tokens.push(Token::Var);
-                        println!("Erkannter Token: `var` (Var)");
                     }
                     "print" => {
                         tokens.push(Token::Print);
-                        println!("Erkannter Token: `print` (Print)");
                     }
                     "if" => {
                         tokens.push(Token::If);
-                        println!("Erkannter Token: `if` (If)");
                     }
                     "else" => {
                         tokens.push(Token::Else);
-                        println!("Erkannter Token: `else` (Else)");
                     }
                     "while" => {
                         tokens.push(Token::While);
-                        println!("Erkannter Token: `while` (While)");
                     }
                     "for" =>{
                         tokens.push(Token::For);
-                        println!("Erkannter Token: `for` (For)");
                     }
                     ".." => {
                         tokens.push(Token::Til);
-                        println!("Erkannter Token: `..` (Til)");
                     }
                     "switch" => tokens.push(Token::Switch),
                     "case" => tokens.push(Token::Case),
@@ -177,11 +159,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     "break" => tokens.push(Token::Break),
                     "in"=>{
                         tokens.push(Token::In);
-                        println!("Erkannter Token: `in` (In)");
                     }
                     _ => {
                         tokens.push(Token::Identifier(ident.clone()));
-                        println!("Erkannter Token: `{}` (Identifier)", ident);
                     }
                 }
             }
@@ -191,7 +171,6 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     }
 
     tokens.push(Token::Eof);
-    println!("Erkannter Token: EOF (End of File)");
     tokens
 }
 

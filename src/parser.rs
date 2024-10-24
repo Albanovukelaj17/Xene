@@ -428,7 +428,16 @@ pub fn parse_switch(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                         return None;
                     }
 
-                    let case_block = parse_block(tokens)?;
+                    // Try to parse a block or a single statement for the `case`
+                    let case_block = if let Some(Token::LeftBrace) = tokens.get(0).cloned() {
+                        parse_block(tokens)?
+                    } else if let Some(statement) = parse_assignment(tokens) {
+                        ASTNode::Block(vec![statement])
+                    } else {
+                        let statement = parse_expression(tokens)?;
+                        ASTNode::Block(vec![statement])
+                    };
+
                     cases.push((case_value, case_block));
                 }
                 Token::Default => {
@@ -441,7 +450,15 @@ pub fn parse_switch(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                         return None;
                     }
 
-                    default_case = Some(Box::new(parse_block(tokens)?));
+                    // Try to parse a block or a single statement for the `default`
+                    default_case = Some(Box::new(if let Some(Token::LeftBrace) = tokens.get(0).cloned() {
+                        parse_block(tokens)?
+                    } else if let Some(statement) = parse_assignment(tokens) {
+                        ASTNode::Block(vec![statement])
+                    } else {
+                        let statement = parse_expression(tokens)?;
+                        ASTNode::Block(vec![statement])
+                    }));
                 }
                 Token::RightBrace => {
                     tokens.remove(0); // Remove `}`

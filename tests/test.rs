@@ -394,7 +394,11 @@
 
     #[test]
     fn test_parse_switch() {
-        let input = "switch x { case 1: print(1); case 2: print(2); default: print(0); }";
+        let input =
+            "switch x {
+         case 1: print(1);
+         case 2: print(2);
+         default: print(0); }";
         let mut tokens = tokenize(input);
         if let Some(ast) = parse_switch(&mut tokens) {
             match ast {
@@ -672,6 +676,7 @@
 
         assert_eq!(*env.get("result").unwrap(), 2); // Expect `result` to be `2` because `x` is `2`
     }
+
 
 
 
