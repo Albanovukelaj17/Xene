@@ -14,6 +14,9 @@ pub enum Token {
     RightParen,
     LeftBrace,
     RightBrace,
+    LeftBracket,
+    RightBracket,
+    Comma,
     GreaterThan,
     LessThan,
     GreaterEqual,
@@ -79,6 +82,9 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             '}' => {
                 tokens.push(Token::RightBrace);
             }
+            '[' => tokens.push(Token::LeftBracket),   // Unterstützung für [
+            ']' => tokens.push(Token::RightBracket),  // Unterstützung für ]
+            ',' => tokens.push(Token::Comma),
             '>' => {
                 if i + 1 < chars.len() && chars[i + 1] == '=' {
                     tokens.push(Token::GreaterEqual);
@@ -111,7 +117,7 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
             }
 
-            ' ' | '\n' => {
+            ' ' | '\n' | '\t' => {
                 // Ignoriere Leerzeichen und Zeilenumbrüche
             }
             c if c.is_digit(10) => {

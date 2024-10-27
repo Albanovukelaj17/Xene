@@ -30,12 +30,13 @@ pub enum ASTNode {
         cases: Vec<(ASTNode, ASTNode)>, // Each case has a value and a block
         default: Option<Box<ASTNode>>,  // Optional default block
     },
+    List(Vec<ASTNode>),
     Print(Box<ASTNode>),
 
 }
 
 pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
-    println!("Starting to parse assignment, current token: {:?}", tokens.get(0));
+    println!("____Starting to parse assignment, current token: {:?},{:?}", tokens.get(0),tokens.get(1));
 
     if let Some(Token::Var) = tokens.get(0).cloned() {
         tokens.remove(0);  // Remove `var`
@@ -56,6 +57,8 @@ pub fn parse_assignment(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                         println!("Optional: No semicolon found after assignment.");
                     }
 
+
+                    println!("______FInished Parsing");
                     // Return the assignment AST node
                     return Some(ASTNode::Assignment {
                         var_name: var_name.clone(),
@@ -177,6 +180,9 @@ pub fn parse_print(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+
+
+    println!("______starting prasing IF");
     if let Some(Token::If) = tokens.get(0).cloned() {
         tokens.remove(0);  // Remove `if`
         let condition = parse_expression(tokens)?;
@@ -193,6 +199,8 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
             } else {
                 None
             };
+
+            println!("____ending parsing IF");
             return Some(ASTNode::If {
                 condition: Box::new(condition),
                 then_branch: Box::new(then_branch),
@@ -207,15 +215,39 @@ pub fn parse_if(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 
 pub fn parse_while(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    println!("____starting parsing While");
+
     if let Some(Token::While) = tokens.get(0).cloned() {
         tokens.remove(0);  // Remove `while`
-        let condition = parse_expression(tokens)?;
-        let body = parse_block(tokens)?;
+
+        println!("Parsing while condition, current token: {:?}", tokens.get(0));
+        let condition = match parse_expression(tokens) {
+            Some(cond) => cond,
+            None => {
+                println!("Error: Failed to parse while condition.");
+                return None;
+            }
+        };
+
+        println!("Parsed while condition: {:?}", condition);
+
+        println!("Parsing while body, expecting `{{`.");
+        let body = match parse_block(tokens) {
+            Some(b) => b,
+            None => {
+                println!("Error: Failed to parse while body.");
+                return None;
+            }
+        };
+
+        println!("____ending parsing While");
         return Some(ASTNode::While {
             condition: Box::new(condition),
             body: Box::new(body),
         });
     }
+
+    println!("Error: Not a 'while' statement.");
     None
 }
 
@@ -231,17 +263,31 @@ pub fn parse_block(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 return Some(ASTNode::Block(statements));
             }
 
-            // Try parsing a statement inside the block
-            if let Some(statement) = parse_expression(tokens) {
+            // Try parsing a `while` statement first
+            if let Some(statement) = parse_while(tokens) {
                 statements.push(statement);
+            }
+            // Then try parsing an `if` statement
+            else if let Some(statement) = parse_if(tokens) {
+                statements.push(statement);
+            }
+            // Then try parsing an assignment or other expressions
+            else if let Some(statement) = parse_assignment(tokens) {
+                statements.push(statement);
+            }
+            // Optionally, parse other constructs like `for` or `switch` here
+            else if let Some(statement) = parse_for(tokens) {
+                statements.push(statement);
+            } else if let Some(statement) = parse_switch(tokens) {
+                statements.push(statement);
+            }
+            // Add other control structures here if needed.
 
-                // Optionally, check for a semicolon after each statement
-                if let Some(Token::Semicolon) = tokens.get(0).cloned() {
-                    tokens.remove(0); // Remove `;`
-                }
+            // Optionally, check for a semicolon after each statement
+            if let Some(Token::Semicolon) = tokens.get(0).cloned() {
+                tokens.remove(0); // Remove `;`
             } else {
-                println!("Error: Failed to parse a statement inside the block.");
-                return None;
+                println!("Error: Expected a semicolon after the statement.");
             }
         }
 
@@ -481,4 +527,44 @@ pub fn parse_switch(tokens: &mut Vec<Token>) -> Option<ASTNode> {
         println!("Error: Not a `switch` statement.");
         None
     }
+}
+pub fn parse_list(tokens: &mut Vec<Token>) -> Option<ASTNode> {
+    if let Some(Token::LeftBracket) = tokens.get(0).cloned() {
+        tokens.remove(0); // Entferne `[` für Liste
+
+        let mut elements = Vec::new();
+
+        while let Some(token) = tokens.get(0).cloned() {
+            match token {
+                Token::RightBracket => {
+                    tokens.remove(0); // Entferne `]` und beende Liste
+                    return Some(ASTNode::List(elements));
+                }
+                _ => {
+                    // Parse jedes Element in der Liste
+                    if let Some(element) = parse_expression(tokens) {
+                        elements.push(element);
+
+                        // Überprüfe auf Komma zwischen Listenelementen
+                        if let Some(Token::Comma) = tokens.get(0).cloned() {
+                            tokens.remove(0); // Entferne `,`
+                        } else if let Some(Token::RightBracket) = tokens.get(0).cloned() {
+                            // Falls das nächste Zeichen `]` ist, schließe die Liste
+                            tokens.remove(0); // Entferne `]`
+                            return Some(ASTNode::List(elements));
+                        } else {
+                            println!("Error: Erwartetes `,` oder `]` nach Listenelement");
+                            return None;
+                        }
+                    } else {
+                        println!("Error: Konnte Listenelement nicht parsen");
+                        return None;
+                    }
+                }
+            }
+        }
+    }
+
+    println!("Error: Liste muss mit `[` beginnen");
+    None
 }

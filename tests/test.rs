@@ -815,38 +815,41 @@
     #[test]
     fn test_multiple_loops_and_conditionals() {
         let input = "
-        var a = 5;
-        var b = 10;
-        var c = 0;
+    var a = 5;
+    var b = 10;
+    var c = 0;
 
-        while a < b {
-            if a % 2 == 0 {
-                c = c + 2;
-            } else {
-                c = c + 1;
-            }
-            a = a + 1;
+    while a < b {
+        if a % 2 == 0 {
+            c = c + 2;
+        } else {
+            c = c + 1;
         }
+        a = a + 1;  // This ensures `a` increments, making the loop condition false eventually.
+    }
 
-        if c >= 10 {
-            print(c);  // Expected to print 10 or more
-        }";
+    if c >= 10 {
+        print(c);  // Expected to print a value.
+    }";
+
 
         let mut env = HashMap::new();
         let mut tokens = tokenize(input);
 
         // Parse and execute
+
         while !tokens.is_empty() {
-            if let Some(ast) = parse_assignment(&mut tokens) {
-                interpret(ast, &mut env);
-            } else if let Some(ast) = parse_while(&mut tokens) {
+            if let Some(ast) = parse_while(&mut tokens) {
                 interpret(ast, &mut env);
             } else if let Some(ast) = parse_if(&mut tokens) {
+                interpret(ast, &mut env);
+            } else if let Some(ast) = parse_assignment(&mut tokens) {
                 interpret(ast, &mut env);
             } else {
                 break;
             }
         }
+
 
         // After execution, `c` should be calculated based on loop and conditional
         assert_eq!(*env.get("c").unwrap(), 10);  // Example expected result
