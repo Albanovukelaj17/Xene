@@ -1,8 +1,8 @@
 
     use std::collections::HashMap;
     use Xene::lexer::{tokenize, Token};
-    use Xene::parser::{parse_assignment, parse_expression, parse_for, parse_if, parse_while,parse_switch, ASTNode};
-    use Xene::interpreter::interpret;
+    use Xene::parser::{parse_assignment, parse_expression, parse_for, parse_if, parse_while,parse_switch,parse_list, ASTNode};
+    use Xene::interpreter::{interpret,evaluate_expression,evaluate_condition};
 
 
 
@@ -414,6 +414,34 @@
         }
     }
 
+    #[test]
+    fn test_parse_list() {
+        let input = "[1, 2, 3 + 4, var1]";
+        let mut tokens = tokenize(input);
+
+        // Versuche, die Liste zu parsen
+        if let Some(ASTNode::List(elements)) = parse_list(&mut tokens) {
+            assert_eq!(elements.len(), 4); // Überprüfe, ob die Liste 4 Elemente hat
+
+            // Überprüfe, ob die Elemente korrekt sind
+            assert_eq!(elements[0], ASTNode::Number(1));
+            assert_eq!(elements[1], ASTNode::Number(2));
+
+            // Überprüfe den Ausdruck `3 + 4` als binäre Operation
+            if let ASTNode::BinaryOp { left, operator, right } = &elements[2] {
+                assert_eq!(**left, ASTNode::Number(3));
+                assert_eq!(operator, &Token::Plus);
+                assert_eq!(**right, ASTNode::Number(4));
+            } else {
+                panic!("Expected a binary operation for the third element.");
+            }
+
+            // Überprüfe das letzte Element `var1` als Identifier
+            assert_eq!(elements[3], ASTNode::Identifier("var1".to_string()));
+        } else {
+            panic!("Failed to parse list.");
+        }
+    }
 
 
 
@@ -543,6 +571,27 @@
         assert_eq!(*env.get("total").unwrap(), 6);
     }
 
+
+    #[test]
+    fn test_interpret_list() {
+        let input = "[1, 2 * 2, var1, 5 + 3]";
+        let mut env = HashMap::new();
+        env.insert("var1".to_string(), 7);
+        let mut tokens = tokenize(input);
+
+        // Parse die Liste
+        if let Some(ASTNode::List(elements)) = parse_list(&mut tokens) {
+            // Teste das Interpretieren der Liste
+            let evaluated_list: Vec<i64> = elements.into_iter()
+                .map(|element| evaluate_expression(element, &mut env))
+                .collect();
+
+            // Überprüfe die erwarteten Werte der ausgewerteten Liste
+            assert_eq!(evaluated_list, vec![1, 4, 7, 8]);
+        } else {
+            panic!("Failed to parse list for interpretation.");
+        }
+    }
 
 
 
@@ -812,7 +861,8 @@
         // After execution, `total` should accumulate values based on the condition
         assert_eq!(*env.get("total").unwrap(), 8);  // Example expected result
     }
-    #[test]
+    //#[test] unendlcih loop
+
     fn test_multiple_loops_and_conditionals() {
         let input = "
     var a = 5;

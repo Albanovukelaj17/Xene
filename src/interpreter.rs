@@ -130,6 +130,12 @@ pub fn interpret(ast: ASTNode, env: &mut HashMap<String, i64>) {
                 }
             }
         }
+        ASTNode::List(list) => {
+            let evaluated_list: Vec<i64> = list.into_iter()
+                .map(|element| evaluate_expression(element, env))
+                .collect();
+            println!("Evaluated list: {:?}", evaluated_list);
+        }
 
         _ => {
             println!("Unrecognized AST node: {:?}", ast);
