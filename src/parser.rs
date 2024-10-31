@@ -530,27 +530,26 @@ pub fn parse_switch(tokens: &mut Vec<Token>) -> Option<ASTNode> {
 }
 pub fn parse_list(tokens: &mut Vec<Token>) -> Option<ASTNode> {
     if let Some(Token::LeftBracket) = tokens.get(0).cloned() {
-        tokens.remove(0); // Entferne `[` für Liste
+        tokens.remove(0); // Entferne `[`, da wir jetzt eine Liste parsen
 
         let mut elements = Vec::new();
 
         while let Some(token) = tokens.get(0).cloned() {
             match token {
                 Token::RightBracket => {
-                    tokens.remove(0); // Entferne `]` und beende Liste
+                    tokens.remove(0); // Entferne `]` und schließe die Liste ab
                     return Some(ASTNode::List(elements));
                 }
                 _ => {
-                    // Parse jedes Element in der Liste
+                    // Versuche, jedes Element in der Liste zu parsen
                     if let Some(element) = parse_expression(tokens) {
                         elements.push(element);
 
                         // Überprüfe auf Komma zwischen Listenelementen
                         if let Some(Token::Comma) = tokens.get(0).cloned() {
-                            tokens.remove(0); // Entferne `,`
+                            tokens.remove(0); // Entferne `,` und gehe zum nächsten Element
                         } else if let Some(Token::RightBracket) = tokens.get(0).cloned() {
-                            // Falls das nächste Zeichen `]` ist, schließe die Liste
-                            tokens.remove(0); // Entferne `]`
+                            tokens.remove(0); // Schließe die Liste, wenn `]` kommt
                             return Some(ASTNode::List(elements));
                         } else {
                             println!("Error: Erwartetes `,` oder `]` nach Listenelement");
@@ -563,8 +562,10 @@ pub fn parse_list(tokens: &mut Vec<Token>) -> Option<ASTNode> {
                 }
             }
         }
+        println!("Error: Liste wurde nicht mit `]` geschlossen");
+        None
+    } else {
+        println!("Error: Liste muss mit `[` beginnen");
+        None
     }
-
-    println!("Error: Liste muss mit `[` beginnen");
-    None
 }
